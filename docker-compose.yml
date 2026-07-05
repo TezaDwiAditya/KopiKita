@@ -1,0 +1,37 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kopikita-app:latest
+    restart: unless-stopped
+    volumes:
+      - kopikita_database:/var/www/html/database
+      - kopikita_storage:/var/www/html/storage
+      - kopikita_cache:/var/www/html/bootstrap/cache
+      - kopikita_public:/var/www/html/public
+    networks:
+      - kopikita
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "8080:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - kopikita_public:/var/www/html/public:ro
+    networks:
+      - kopikita
+
+networks:
+  kopikita:
+    driver: bridge
+
+volumes:
+  kopikita_database:
+  kopikita_storage:
+  kopikita_cache:
+  kopikita_public:

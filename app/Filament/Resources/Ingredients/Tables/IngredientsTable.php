@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Filament\Resources\Ingredients\Tables;
+
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+
+class IngredientsTable
+{
+    public static function configure(Table $table): Table
+    {
+        return $table
+            ->columns([
+                TextColumn::make('name')->label('Nama Bahan')->searchable()->sortable(),
+                TextColumn::make('unit')->label('Satuan')->badge()->searchable(),
+                TextColumn::make('price')->label('Harga')->formatStateUsing(fn (int $state): string => 'Rp '.number_format($state, 0, ',', '.'))->sortable(),
+                TextColumn::make('minimum_stock')->label('Minimal Stock')->numeric()->sortable(),
+                TextColumn::make('current_stock')->label('Stock Saat Ini')->numeric()->sortable()->color(fn ($record): string => $record->current_stock <= $record->minimum_stock ? 'danger' : 'success'),
+                TextColumn::make('created_at')->label('Dibuat')->dateTime('d M Y H:i')->sortable()->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('updated_at')->label('Diubah')->dateTime('d M Y H:i')->sortable()->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->filters([
+                SelectFilter::make('unit')->label('Satuan')->options(['gr' => 'Gram', 'ml' => 'Mililiter', 'pcs' => 'Pieces']),
+                SelectFilter::make('stock_status')
+                    ->label('Status Stock')
+                    ->options(['low' => 'Hampir Habis', 'safe' => 'Aman'])
+                    ->query(fn (Builder $query, array $data): Builder => match ($data['value'] ?? null) {
+                        'low' => $query->whereColumn('current_stock', '<=', 'minimum_stock'),
+                        'safe' => $query->whereColumn('current_stock', '>', 'minimum_stock'),
+                        default => $query,
+                    }),
+            ])
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make(),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
+            ]);
+    }
+}
