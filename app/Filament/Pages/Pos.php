@@ -14,6 +14,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use UnitEnum;
 use Throwable;
@@ -36,6 +37,8 @@ class Pos extends Page
 
     public ?int $customerId = null;
 
+
+    public string $customerSearch = '';
     public string $search = '';
 
     public array $cart = [];
@@ -46,14 +49,17 @@ class Pos extends Page
 
     public string $paymentMethod = 'cash';
 
-    public int $amountPaid = 0;
+    public int|string $amountPaid = 0;
 
     public ?string $note = null;
+
+    public string $transactionDate;
 
     public ?int $lastTransactionId = null;
 
     public function mount(): void
     {
+        $this->transactionDate = today()->toDateString();
         $this->tax = $this->calculateTax();
     }
 
@@ -83,6 +89,41 @@ class Pos extends Page
             ->get();
     }
 
+
+    public function getFilteredCustomersProperty(): Collection
+    {
+        return Customer::query()
+            ->when($this->customerSearch !== '', fn ($query) => $query
+                ->where('name', 'like', '%'.$this->customerSearch.'%')
+                ->orWhere('phone_number', 'like', '%'.$this->customerSearch.'%'))
+            ->orderBy('name')
+            ->limit(10)
+            ->get();
+    }
+
+    public function getSelectedCustomerProperty(): ?Customer
+    {
+        return $this->customerId ? Customer::query()->find($this->customerId) : null;
+    }
+
+    public function updatedCustomerSearch(): void
+    {
+        if ($this->selectedCustomer?->name !== $this->customerSearch) {
+            $this->customerId = null;
+        }
+    }
+
+    public function selectCustomer(?int $customerId): void
+    {
+        $this->customerId = $customerId;
+        $this->customerSearch = $customerId ? (string) Customer::query()->whereKey($customerId)->value('name') : '';
+    }
+
+    public function clearCustomer(): void
+    {
+        $this->customerId = null;
+        $this->customerSearch = '';
+    }
     public function selectCategory(?int $categoryId): void
     {
         $this->selectedCategoryId = $categoryId;
@@ -116,10 +157,10 @@ class Pos extends Page
     {
         $menu = Menu::query()->findOrFail($menuId);
 
-        if (isset($this->cart[$menuId])) {
-            $this->cart[$menuId]['qty']++;
+        if (isset($this->cart[$cartKey])) {
+            $this->cart[$cartKey]['qty']++;
         } else {
-            $this->cart[$menuId] = [
+            $this->cart[$cartKey] = [
                 'menu_id' => $menu->id,
                 'name' => $menu->name,
                 'price' => $menu->selling_price,
@@ -131,34 +172,34 @@ class Pos extends Page
         $this->recalculateTax();
     }
 
-    public function incrementQty(int $menuId): void
+    public function incrementQty(string|int $cartKey): void
     {
-        if (! isset($this->cart[$menuId])) {
+        if (! isset($this->cart[$cartKey])) {
             return;
         }
 
-        $this->cart[$menuId]['qty']++;
+        $this->cart[$cartKey]['qty']++;
         $this->recalculateTax();
     }
 
-    public function decrementQty(int $menuId): void
+    public function decrementQty(string|int $cartKey): void
     {
-        if (! isset($this->cart[$menuId])) {
+        if (! isset($this->cart[$cartKey])) {
             return;
         }
 
-        $this->cart[$menuId]['qty']--;
+        $this->cart[$cartKey]['qty']--;
 
-        if ($this->cart[$menuId]['qty'] <= 0) {
-            unset($this->cart[$menuId]);
+        if ($this->cart[$cartKey]['qty'] <= 0) {
+            unset($this->cart[$cartKey]);
         }
 
         $this->recalculateTax();
     }
 
-    public function removeItem(int $menuId): void
+    public function removeItem(string|int $cartKey): void
     {
-        unset($this->cart[$menuId]);
+        unset($this->cart[$cartKey]);
         $this->recalculateTax();
     }
 
@@ -181,7 +222,7 @@ class Pos extends Page
 
     public function getChangeAmountProperty(): int
     {
-        return max(0, $this->amountPaid - $this->grandTotal);
+        return max(0, (int) ($this->amountPaid ?? 0) - $this->grandTotal);
     }
 
     public function saveDraft(): void
@@ -265,7 +306,7 @@ class Pos extends Page
         return DB::transaction(function () use ($status): Transaction {
             $transaction = Transaction::query()->create([
                 'invoice_number' => $this->generateInvoiceNumber(),
-                'transaction_date' => now(),
+                'transaction_date' => Carbon::parse($this->transactionDate)->setTimeFrom(now()),
                 'cashier_id' => auth()->id(),
                 'customer_id' => $this->customerId,
                 'subtotal' => $this->subtotal,
@@ -293,7 +334,8 @@ class Pos extends Page
 
     private function generateInvoiceNumber(): string
     {
-        $prefix = 'INV-'.now()->format('Ymd').'-';
+        $invoiceDate = Carbon::parse($this->transactionDate);
+        $prefix = 'INV-'.$invoiceDate->format('Ymd').'-';
         $lastInvoice = Transaction::query()
             ->where('invoice_number', 'like', $prefix.'%')
             ->lockForUpdate()
@@ -324,5 +366,6 @@ class Pos extends Page
         $this->tax = 0;
         $this->amountPaid = 0;
         $this->note = null;
+        $this->transactionDate = today()->toDateString();
     }
 }

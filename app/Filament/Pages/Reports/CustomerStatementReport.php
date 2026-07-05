@@ -25,17 +25,20 @@ class CustomerStatementReport extends Page
 
     protected static ?int $navigationSort = 115;
 
-    public string $startDate;
+    public ?string $startDate = null;
 
-    public string $endDate;
+    public ?string $endDate = null;
 
-    public ?int $customerId = null;
+    public int|string|null $customerId = null;
 
     public function mount(): void
     {
         $this->startDate = now()->startOfMonth()->toDateString();
         $this->endDate = now()->toDateString();
-        $this->customerId = Customer::query()->orderBy('name')->value('id');
+        $this->customerId = Customer::query()
+            ->whereHas('transactions', fn ($query) => $query->whereIn('status', ['draft', 'paid']))
+            ->orderBy('name')
+            ->value('id') ?? Customer::query()->orderBy('name')->value('id');
     }
 
     public function getCustomersProperty(): Collection
@@ -45,7 +48,7 @@ class CustomerStatementReport extends Page
 
     public function getCustomerProperty(): ?Customer
     {
-        return $this->customerId ? Customer::query()->find($this->customerId) : null;
+        return filled($this->customerId) ? Customer::query()->find((int) $this->customerId) : null;
     }
 
     public function getSettingProperty(): ?Setting
@@ -55,14 +58,14 @@ class CustomerStatementReport extends Page
 
     public function getTransactionsProperty(): Collection
     {
-        if (! $this->customerId) {
+        if (! filled($this->customerId) || blank($this->startDate) || blank($this->endDate)) {
             return collect();
         }
 
         return Transaction::query()
             ->with(['items', 'payment'])
-            ->where('status', 'paid')
-            ->where('customer_id', $this->customerId)
+            ->whereIn('status', ['draft', 'paid'])
+            ->where('customer_id', (int) $this->customerId)
             ->whereDate('transaction_date', '>=', $this->startDate)
             ->whereDate('transaction_date', '<=', $this->endDate)
             ->orderBy('transaction_date')
@@ -75,14 +78,17 @@ class CustomerStatementReport extends Page
 
         return $this->transactions->map(function (Transaction $transaction) use (&$runningBalance): array {
             $amount = (int) $transaction->grand_total;
-            $runningBalance += $amount;
+            $paid = $transaction->status === 'paid'
+                ? (int) ($transaction->payment?->amount_paid ?? $transaction->grand_total)
+                : 0;
+            $runningBalance += $amount - $paid;
 
             return [
                 'date' => $transaction->transaction_date->format('d M Y'),
                 'invoice' => $transaction->invoice_number,
-                'description' => 'Penjualan #'.$transaction->invoice_number,
+                'description' => 'Penjualan #'.$transaction->invoice_number.' ('.strtoupper($transaction->status).')',
                 'amount' => $amount,
-                'paid' => 0,
+                'paid' => $paid,
                 'due' => $transaction->transaction_date->format('d M Y'),
                 'running_balance' => $runningBalance,
                 'items' => $transaction->items->map(fn ($item): array => [
@@ -98,15 +104,20 @@ class CustomerStatementReport extends Page
 
     public function getSummaryProperty(): array
     {
-        $totalSales = $this->transactions->sum('grand_total');
+        $transactions = $this->transactions;
+        $totalSales = (int) $transactions->sum('grand_total');
+        $cashIn = (int) $transactions->sum(fn (Transaction $transaction): int => $transaction->status === 'paid'
+            ? (int) ($transaction->payment?->amount_paid ?? $transaction->grand_total)
+            : 0);
+        $receivable = (int) $transactions->where('status', 'draft')->sum('grand_total');
 
         return [
-            'transaction_count' => $this->transactions->count(),
+            'transaction_count' => $transactions->count(),
             'total_sales' => $totalSales,
             'total_purchase' => 0,
-            'cash_in' => 0,
+            'cash_in' => $cashIn,
             'cash_out' => 0,
-            'receivable' => $totalSales,
+            'receivable' => $receivable,
         ];
     }
 

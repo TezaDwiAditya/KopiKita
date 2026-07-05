@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Ingredient;
 use App\Models\Transaction;
+use App\Models\TransactionItem;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -28,6 +29,25 @@ class SalesStatsOverview extends StatsOverviewWidget
             ->whereDate('transaction_date', today())
             ->count();
 
+
+        $unpaidTransactions = Transaction::query()
+            ->where('status', 'draft')
+            ->count();
+
+        $unpaidTotal = Transaction::query()
+            ->where('status', 'draft')
+            ->sum('grand_total');
+
+        $monthItems = TransactionItem::query()
+            ->with(['menu', 'variant'])
+            ->whereHas('transaction', fn ($query) => $query
+                ->where('status', 'paid')
+                ->whereBetween('transaction_date', [now()->startOfMonth(), now()->endOfMonth()]))
+            ->get();
+
+        $monthCost = $monthItems->sum(fn (TransactionItem $item): int => (int) ($item->variant?->cost_price ?? $item->menu?->cost_price ?? 0) * (int) $item->quantity);
+        $monthProfit = (int) $monthItems->sum('subtotal') - $monthCost;
+
         $lowStockCount = Ingredient::query()
             ->whereColumn('current_stock', '<=', 'minimum_stock')
             ->count();
@@ -45,6 +65,14 @@ class SalesStatsOverview extends StatsOverviewWidget
                 ->description('Jumlah transaksi paid')
                 ->descriptionIcon('heroicon-m-shopping-cart')
                 ->color('warning'),
+            Stat::make('Belum Dibayar', number_format($unpaidTransactions, 0, ',', '.'))
+                ->description('Total draft '.$this->rupiah($unpaidTotal))
+                ->descriptionIcon('heroicon-m-clock')
+                ->color($unpaidTransactions > 0 ? 'danger' : 'success'),
+            Stat::make('Keuntungan Bulan Ini', $this->rupiah($monthProfit))
+                ->description('Modal bulan ini '.$this->rupiah($monthCost))
+                ->descriptionIcon('heroicon-m-currency-dollar')
+                ->color($monthProfit >= 0 ? 'success' : 'danger'),
             Stat::make('Stock Hampir Habis', number_format($lowStockCount, 0, ',', '.'))
                 ->description('Bahan di bawah minimal stock')
                 ->descriptionIcon('heroicon-m-exclamation-triangle')

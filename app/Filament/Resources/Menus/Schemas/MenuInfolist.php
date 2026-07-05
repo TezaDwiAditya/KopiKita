@@ -35,6 +35,9 @@ class MenuInfolist
                         TextEntry::make('cost_price')
                             ->label('Harga Modal')
                             ->formatStateUsing(fn (int $state): string => 'Rp '.number_format($state, 0, ',', '.')),
+                        TextEntry::make('profit_amount')
+                            ->label('Keuntungan / Item')
+                            ->formatStateUsing(fn (int $state): string => 'Rp '.number_format($state, 0, ',', '.')),
                         TextEntry::make('recipe_multiplier')
                             ->label('Kali Resep')
                             ->formatStateUsing(fn (int $state): string => 'x'.$state),
@@ -42,7 +45,7 @@ class MenuInfolist
                             ->label('Aktif')
                             ->boolean(),
                     ])
-                    ->columns(5)
+                    ->columns(6)
                     ->columnSpanFull(),
             ]),
             Section::make('Audit')->columns(2)->collapsed()->schema([

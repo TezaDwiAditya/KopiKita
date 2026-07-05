@@ -10,6 +10,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -45,6 +46,21 @@ class TransactionsTable
                 SelectFilter::make('status')->label('Status')->options(['draft' => 'Draft', 'paid' => 'Paid', 'void' => 'Void']),
                 SelectFilter::make('cashier_id')->label('Kasir')->relationship('cashier', 'name')->searchable()->preload(),
                 SelectFilter::make('customer_id')->label('Customer')->relationship('customer', 'name')->searchable()->preload(),
+                Filter::make('transaction_date')
+                    ->label('Tanggal Transaksi')
+                    ->form([
+                        DatePicker::make('date_from')
+                            ->label('Tanggal Mulai')
+                            ->native(false)
+                            ->displayFormat('d/m/Y'),
+                        DatePicker::make('date_until')
+                            ->label('Tanggal Selesai')
+                            ->native(false)
+                            ->displayFormat('d/m/Y'),
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => $query
+                        ->when($data['date_from'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('transaction_date', '>=', $date))
+                        ->when($data['date_until'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('transaction_date', '<=', $date))),
                 Filter::make('today')->label('Hari Ini')->query(fn (Builder $query): Builder => $query->whereDate('transaction_date', today())),
             ])
             ->recordActions([

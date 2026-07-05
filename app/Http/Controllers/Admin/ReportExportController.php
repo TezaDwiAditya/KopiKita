@@ -204,7 +204,10 @@ class ReportExportController extends Controller
     {
         $startDate = $request->query('start_date', now()->startOfMonth()->toDateString());
         $endDate = $request->query('end_date', now()->toDateString());
-        $customerId = $request->integer('customer_id') ?: Customer::query()->orderBy('name')->value('id');
+        $customerId = $request->integer('customer_id') ?: Customer::query()
+            ->whereHas('transactions', fn ($query) => $query->whereIn('status', ['draft', 'paid']))
+            ->orderBy('name')
+            ->value('id');
         $customer = $customerId ? Customer::query()->find($customerId) : null;
 
         $transactions = collect();
@@ -212,7 +215,7 @@ class ReportExportController extends Controller
         if ($customerId) {
             $transactions = Transaction::query()
                 ->with(['items', 'payment', 'customer'])
-                ->where('status', 'paid')
+                ->whereIn('status', ['draft', 'paid'])
                 ->where('customer_id', $customerId)
                 ->whereDate('transaction_date', '>=', $startDate)
                 ->whereDate('transaction_date', '<=', $endDate)
@@ -223,14 +226,17 @@ class ReportExportController extends Controller
         $runningBalance = 0;
         $rows = $transactions->map(function (Transaction $transaction) use (&$runningBalance): array {
             $amount = (int) $transaction->grand_total;
-            $runningBalance += $amount;
+            $paid = $transaction->status === 'paid'
+                ? (int) ($transaction->payment?->amount_paid ?? $transaction->grand_total)
+                : 0;
+            $runningBalance += $amount - $paid;
 
             return [
                 'date' => $transaction->transaction_date->format('d M Y'),
                 'invoice' => $transaction->invoice_number,
-                'description' => 'Penjualan #'.$transaction->invoice_number,
+                'description' => 'Penjualan #'.$transaction->invoice_number.' ('.strtoupper($transaction->status).')',
                 'amount' => $amount,
-                'paid' => 0,
+                'paid' => $paid,
                 'due' => $transaction->transaction_date->format('d M Y'),
                 'running_balance' => $runningBalance,
                 'items' => $transaction->items->map(fn (TransactionItem $item): array => [
@@ -244,6 +250,10 @@ class ReportExportController extends Controller
         });
 
         $totalSales = (int) $transactions->sum('grand_total');
+        $cashIn = (int) $transactions->sum(fn (Transaction $transaction): int => $transaction->status === 'paid'
+            ? (int) ($transaction->payment?->amount_paid ?? $transaction->grand_total)
+            : 0);
+        $receivable = (int) $transactions->where('status', 'draft')->sum('grand_total');
 
         return [
             'title' => 'Laporan Customer',
@@ -256,9 +266,9 @@ class ReportExportController extends Controller
                 'transaction_count' => $transactions->count(),
                 'total_sales' => $totalSales,
                 'total_purchase' => 0,
-                'cash_in' => 0,
+                'cash_in' => $cashIn,
                 'cash_out' => 0,
-                'receivable' => $totalSales,
+                'receivable' => $receivable,
             ],
             'generatedAt' => now(),
         ];

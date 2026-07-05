@@ -9,8 +9,20 @@
         .dark .pos-title { color: white; }
         .pos-subtitle { margin-top: 3px; color: rgb(107 114 128); font-size: 13px; }
         .pos-input, .pos-select, .pos-textarea { width: 100%; border-radius: 12px; border: 1px solid rgb(209 213 219); background: white; color: rgb(17 24 39); padding: 10px 12px; font-size: 14px; outline: none; }
+        .customer-search { position: relative; }
+        .customer-dropdown { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; right: 0; max-height: 240px; overflow-y: auto; border: 1px solid rgb(229 231 235); border-radius: 12px; background: white; box-shadow: 0 16px 35px rgb(15 23 42 / 16%); }
+        .customer-option { width: 100%; display: block; border: 0; background: transparent; padding: 10px 12px; text-align: left; cursor: pointer; color: rgb(17 24 39); }
+        .customer-option:hover { background: rgb(254 243 199); }
+        .customer-option-title { font-size: 14px; font-weight: 800; }
+        .customer-option-subtitle { margin-top: 2px; color: rgb(107 114 128); font-size: 12px; }
+        .customer-selected { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-top: 8px; border-radius: 10px; background: rgb(255 251 235); color: rgb(146 64 14); padding: 8px 10px; font-size: 12px; font-weight: 800; }
+        .customer-clear { border: 0; background: transparent; color: rgb(185 28 28); cursor: pointer; font-size: 12px; font-weight: 900; }
         .pos-input:focus, .pos-select:focus, .pos-textarea:focus { border-color: rgb(245 158 11); box-shadow: 0 0 0 3px rgb(245 158 11 / 16%); }
         .dark .pos-input, .dark .pos-select, .dark .pos-textarea { background: rgb(31 41 55); border-color: rgb(75 85 99); color: white; }
+        .dark .customer-dropdown { background: rgb(31 41 55); border-color: rgb(75 85 99); }
+        .dark .customer-option { color: white; }
+        .dark .customer-option:hover { background: rgb(55 65 81); }
+        .dark .customer-selected { background: rgb(69 26 3); color: rgb(253 186 116); }
         .pos-search { max-width: 320px; }
         .pos-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
         .pos-tab { border: 0; border-radius: 999px; padding: 9px 14px; cursor: pointer; font-size: 13px; font-weight: 700; background: rgb(243 244 246); color: rgb(55 65 81); }
@@ -95,8 +107,6 @@
                         <div class="pos-menu-image">
                             @if ($menu->photo_path)
                                 <img src="{{ Storage::url($menu->photo_path) }}" alt="{{ $menu->name }}">
-                            @else
-                                ☕
                             @endif
                         </div>
                         <div class="pos-menu-body">
@@ -140,13 +150,13 @@
                                 <div class="pos-item-name">{{ $item['name'] }} @if ($item['variant_name'] ?? null) - {{ $item['variant_name'] }} @endif</div>
                                 <div class="pos-muted">Rp {{ number_format($item['price'], 0, ',', '.') }}</div>
                             </div>
-                            <button type="button" wire:click="removeItem({{ $menuId }})" class="pos-link-danger">Hapus</button>
+                            <button type="button" wire:click="removeItem('{{ $menuId }}')" class="pos-link-danger">Hapus</button>
                         </div>
                         <div class="pos-row" style="margin-top: 12px;">
                             <div class="pos-qty">
-                                <button type="button" wire:click="decrementQty({{ $menuId }})">-</button>
+                                <button type="button" wire:click="decrementQty('{{ $menuId }}')">-</button>
                                 <span>{{ $item['qty'] }}</span>
-                                <button type="button" wire:click="incrementQty({{ $menuId }})">+</button>
+                                <button type="button" wire:click="incrementQty('{{ $menuId }}')">+</button>
                             </div>
                             <strong>Rp {{ number_format($item['price'] * $item['qty'], 0, ',', '.') }}</strong>
                         </div>
@@ -158,12 +168,44 @@
             </div>
 
             <div class="pos-section">
-                <select wire:model="customerId" class="pos-select">
-                    <option value="">Walk-in</option>
-                    @foreach ($this->customers as $customer)
-                        <option value="{{ $customer->id }}">{{ $customer->name }}</option>
-                    @endforeach
-                </select>
+                <div class="customer-search" x-data="{ open: false }" @click.outside="open = false">
+                    <input
+                        type="text"
+                        wire:model.live.debounce.300ms="customerSearch"
+                        @focus="open = true"
+                        @input="open = true"
+                        placeholder="Cari customer / no HP (kosongkan untuk Walk-in)"
+                        class="pos-input"
+                    />
+
+                    @if ($this->selectedCustomer)
+                        <div class="customer-selected">
+                            <span>Customer: {{ $this->selectedCustomer->name }}</span>
+                            <button type="button" wire:click="clearCustomer" class="customer-clear">Hapus</button>
+                        </div>
+                    @endif
+
+                    <div x-show="open" x-cloak class="customer-dropdown">
+                        <button type="button" wire:click="clearCustomer" @click="open = false" class="customer-option">
+                            <div class="customer-option-title">Walk-in</div>
+                            <div class="customer-option-subtitle">Transaksi tanpa customer</div>
+                        </button>
+
+                        @forelse ($this->filteredCustomers as $customer)
+                            <button type="button" wire:click="selectCustomer({{ $customer->id }})" @click="open = false" class="customer-option">
+                                <div class="customer-option-title">{{ $customer->name }}</div>
+                                <div class="customer-option-subtitle">{{ $customer->phone_number ?: 'No HP belum diisi' }}</div>
+                            </button>
+                        @empty
+                            <div class="customer-option">
+                                <div class="customer-option-title">Customer tidak ditemukan</div>
+                                <div class="customer-option-subtitle">Coba kata kunci lain atau gunakan Walk-in.</div>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+
+                <input type="date" wire:model.live="transactionDate" class="pos-input" />
                 <textarea wire:model.blur="note" rows="2" placeholder="Catatan transaksi" class="pos-textarea"></textarea>
             </div>
 
@@ -181,7 +223,7 @@
                     <option value="transfer">Transfer</option>
                     <option value="debit">Debit</option>
                 </select>
-                <input type="number" min="0" wire:model.live="amountPaid" placeholder="Uang bayar" class="pos-input" />
+                <input type="number" min="0" wire:model.blur="amountPaid" placeholder="Uang bayar" class="pos-input" />
                 <div class="pos-total-row"><span>Kembalian</span><strong style="color: rgb(22 163 74);">Rp {{ number_format($this->changeAmount, 0, ',', '.') }}</strong></div>
             </div>
 

@@ -41,9 +41,10 @@ class MenusTable
                                 $status = $variant->is_active ? '' : ' <span style="color:#dc2626">(nonaktif)</span>';
 
                                 return sprintf(
-                                    '<div><strong>%s</strong> — Rp %s%s</div>',
+                                    '<div><strong>%s</strong> — Jual Rp %s <span style="color:#16a34a">(+Rp %s)</span>%s</div>',
                                     e($variant->name),
                                     number_format((int) $variant->selling_price, 0, ',', '.'),
+                                    number_format((int) $variant->profit_amount, 0, ',', '.'),
                                     $status,
                                 );
                             })

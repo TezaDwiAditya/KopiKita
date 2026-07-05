@@ -2,6 +2,10 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Widgets\BestSellingProductsTable;
+use App\Filament\Widgets\LowStockIngredientsTable;
+use App\Filament\Widgets\SalesChart;
+use App\Filament\Widgets\SalesStatsOverview;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -38,6 +42,10 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
+                SalesStatsOverview::class,
+                SalesChart::class,
+                BestSellingProductsTable::class,
+                LowStockIngredientsTable::class,
                 AccountWidget::class,
                 FilamentInfoWidget::class,
             ])
@@ -54,6 +62,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->maxcontentwidth('full');
     }
 }

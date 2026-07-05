@@ -56,12 +56,38 @@ class MenuForm
                                 MoneyInput::make('selling_price')
                                     ->label('Harga Jual')
                                     ->required()
-                                    ->minValue(0),
+                                    ->minValue(0)
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(function ($state, callable $get, callable $set): void {
+                                        $sellingPrice = self::moneyToInt($state);
+                                        $costPrice = self::moneyToInt($get('cost_price'));
+
+                                        $set('profit_amount', max(0, $sellingPrice - $costPrice));
+                                    }),
                                 MoneyInput::make('cost_price')
                                     ->label('Harga Modal')
                                     ->required()
                                     ->minValue(0)
-                                    ->default(0),
+                                    ->default(0)
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(function ($state, callable $get, callable $set): void {
+                                        $sellingPrice = self::moneyToInt($get('selling_price'));
+                                        $costPrice = self::moneyToInt($state);
+
+                                        $set('profit_amount', max(0, $sellingPrice - $costPrice));
+                                    }),
+                                MoneyInput::make('profit_amount')
+                                    ->label('Keuntungan / Item')
+                                    ->required()
+                                    ->minValue(0)
+                                    ->default(0)
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(function ($state, callable $get, callable $set): void {
+                                        $sellingPrice = self::moneyToInt($get('selling_price'));
+                                        $profitAmount = self::moneyToInt($state);
+
+                                        $set('cost_price', max(0, $sellingPrice - $profitAmount));
+                                    }),
                                 TextInput::make('sort_order')
                                     ->label('Urutan')
                                     ->integer()
@@ -87,5 +113,10 @@ class MenuForm
                             ->columnSpanFull(),
                     ]),
             ])->columns(1);
+    }
+
+    private static function moneyToInt(mixed $value): int
+    {
+        return (int) preg_replace('/\D/', '', (string) ($value ?? ''));
     }
 }

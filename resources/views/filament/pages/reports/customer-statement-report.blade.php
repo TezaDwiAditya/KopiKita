@@ -1,4 +1,4 @@
-﻿<x-filament-panels::page>
+<x-filament-panels::page>
     <style>
         .statement-grid { display: grid; gap: 16px; }
         .statement-card { background: white; border: 1px solid rgb(229 231 235); border-radius: 16px; padding: 16px; box-shadow: 0 8px 22px rgb(15 23 42 / 6%); }
@@ -32,7 +32,7 @@
                 <label class="statement-label">Customer</label>
                 <select wire:model.live="customerId" class="statement-input">
                     @forelse ($this->customers as $customerOption)
-                        <option value="{{ $customerOption->id }}">{{ $customerOption->name }}</option>
+                        <option value="{{ $customerOption->id }}" @selected((string) $customerId === (string) $customerOption->id)>{{ $customerOption->name }}</option>
                     @empty
                         <option value="">Belum ada customer</option>
                     @endforelse
@@ -40,11 +40,11 @@
             </div>
             <div>
                 <label class="statement-label">Tanggal Mulai</label>
-                <input type="date" wire:model.live="startDate" class="statement-input">
+                <input type="date" wire:model.live="startDate" value="{{ $startDate }}" class="statement-input">
             </div>
             <div>
                 <label class="statement-label">Tanggal Selesai</label>
-                <input type="date" wire:model.live="endDate" class="statement-input">
+                <input type="date" wire:model.live="endDate" value="{{ $endDate }}" class="statement-input">
             </div>
             <div class="statement-actions">
                 <a class="statement-btn statement-pdf" href="{{ $this->exportUrl('pdf') }}">Export PDF</a>
