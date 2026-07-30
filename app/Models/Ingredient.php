@@ -36,4 +36,9 @@ class Ingredient extends Model
     {
         return $this->hasMany(RecipeItem::class);
     }
+
+    public function purchaseOrderItems(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderItem::class);
+    }
 }

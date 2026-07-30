@@ -5,8 +5,18 @@ services:
       dockerfile: Dockerfile
     image: kopikita-app:latest
     restart: unless-stopped
+    environment:
+      APP_NAME: KopiKita
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8080
+      DB_CONNECTION: mysql
+      DB_HOST: host.docker.internal
+      DB_PORT: 3306
+      DB_DATABASE: kopikita_dev
+      DB_USERNAME: root
+      DB_PASSWORD: ""
     volumes:
-      - kopikita_database:/var/www/html/database
       - kopikita_storage:/var/www/html/storage
       - kopikita_cache:/var/www/html/bootstrap/cache
       - kopikita_public:/var/www/html/public
@@ -31,7 +41,6 @@ networks:
     driver: bridge
 
 volumes:
-  kopikita_database:
   kopikita_storage:
   kopikita_cache:
   kopikita_public:

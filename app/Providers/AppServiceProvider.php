@@ -8,6 +8,7 @@ use App\Models\Ingredient;
 use App\Models\IngredientStock;
 use App\Models\Menu;
 use App\Models\Payment;
+use App\Models\PurchaseOrder;
 use App\Models\Recipe;
 use App\Models\RecipeItem;
 use App\Models\Setting;
@@ -18,6 +19,7 @@ use App\Policies\IngredientPolicy;
 use App\Policies\IngredientStockPolicy;
 use App\Policies\MenuPolicy;
 use App\Policies\PaymentPolicy;
+use App\Policies\PurchaseOrderPolicy;
 use App\Policies\RecipeItemPolicy;
 use App\Policies\RecipePolicy;
 use App\Policies\SettingPolicy;
@@ -49,6 +51,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Customer::class, CustomerPolicy::class);
         Gate::policy(Transaction::class, TransactionPolicy::class);
         Gate::policy(Payment::class, PaymentPolicy::class);
+        Gate::policy(PurchaseOrder::class, PurchaseOrderPolicy::class);
         Gate::policy(Setting::class, SettingPolicy::class);
     }
 }

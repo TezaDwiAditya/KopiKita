@@ -27,7 +27,7 @@ class CashIn extends Page
 
     protected static ?string $title = 'Uang Masuk';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
     public ?int $customerId = null;
 

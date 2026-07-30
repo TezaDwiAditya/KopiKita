@@ -5,7 +5,7 @@ use App\Http\Controllers\Admin\ReportExportController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect('/admin');
 });
 
 Route::middleware(['web', 'auth'])->get('/admin/transactions/{transaction}/receipt', ReceiptController::class)

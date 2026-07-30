@@ -13,11 +13,11 @@ use BackedEnum;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use UnitEnum;
 use Throwable;
+use UnitEnum;
 
 class Pos extends Page
 {
@@ -37,8 +37,8 @@ class Pos extends Page
 
     public ?int $customerId = null;
 
-
     public string $customerSearch = '';
+
     public string $search = '';
 
     public array $cart = [];
@@ -89,7 +89,6 @@ class Pos extends Page
             ->get();
     }
 
-
     public function getFilteredCustomersProperty(): Collection
     {
         return Customer::query()
@@ -124,6 +123,7 @@ class Pos extends Page
         $this->customerId = null;
         $this->customerSearch = '';
     }
+
     public function selectCategory(?int $categoryId): void
     {
         $this->selectedCategoryId = $categoryId;
@@ -153,9 +153,11 @@ class Pos extends Page
 
         $this->recalculateTax();
     }
+
     public function addToCart(int $menuId): void
     {
         $menu = Menu::query()->findOrFail($menuId);
+        $cartKey = (string) $menu->id;
 
         if (isset($this->cart[$cartKey])) {
             $this->cart[$cartKey]['qty']++;
@@ -320,11 +322,14 @@ class Pos extends Page
             foreach ($this->cart as $item) {
                 $transaction->items()->create([
                     'menu_id' => $item['menu_id'],
+                    'menu_variant_id' => $item['menu_variant_id'] ?? null,
                     'menu_name' => $item['name'],
+                    'variant_name' => $item['variant_name'] ?? null,
                     'quantity' => $item['qty'],
                     'price' => $item['price'],
                     'subtotal' => $item['price'] * $item['qty'],
                     'note' => $item['note'] ?: null,
+                    'kitchen_status' => 'pending',
                 ]);
             }
 

@@ -20,6 +20,10 @@ class TransactionItem extends Model
         'price',
         'subtotal',
         'note',
+        'kitchen_status',
+        'preparing_at',
+        'ready_at',
+        'served_at',
     ];
 
     protected function casts(): array
@@ -28,6 +32,9 @@ class TransactionItem extends Model
             'quantity' => 'integer',
             'price' => 'integer',
             'subtotal' => 'integer',
+            'preparing_at' => 'datetime',
+            'ready_at' => 'datetime',
+            'served_at' => 'datetime',
         ];
     }
 
