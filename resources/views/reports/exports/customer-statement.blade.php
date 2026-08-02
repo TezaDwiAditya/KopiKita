@@ -20,6 +20,8 @@
         .statement th { background: #f3f4f6; text-transform: uppercase; font-size: 10px; letter-spacing: .02em; }
         .right { text-align: right; }
         .bold { font-weight: 800; }
+        .status { font-weight: 800; color: #166534; }
+        .status.unpaid { color: #991b1b; }
         .items { margin-top: 4px; color: #4b5563; font-size: 10px; line-height: 1.5; }
         .footer { margin-top: 18px; color: #4b5563; font-size: 10px; }
     </style>
@@ -44,20 +46,20 @@
 
 <table class="summary">
     <tr>
-        <td class="label">Total Penjualan (Penjualan - Retur Penjualan)</td>
+        <td class="label">Total Tagihan</td>
         <td class="value">{{ $money($summary['total_sales']) }}</td>
-        <td class="label">Total Pembelian (Pembelian - Retur Pembelian)</td>
-        <td class="value">{{ $money($summary['total_purchase']) }}</td>
+        <td class="label">Sudah Dibayar</td>
+        <td class="value">{{ $money($summary['total_paid']) }}</td>
     </tr>
     <tr>
         <td class="label">Uang Masuk</td>
         <td class="value">{{ $money($summary['cash_in']) }}</td>
-        <td class="label">Uang Keluar</td>
-        <td class="value">{{ $money($summary['cash_out']) }}</td>
+        <td class="label">Jumlah Transaksi</td>
+        <td class="value">{{ number_format($summary['transaction_count'], 0, ',', '.') }}</td>
     </tr>
     <tr>
-        <td class="label" colspan="3">Total Piutang</td>
-        <td class="value">{{ $money($summary['receivable']) }}</td>
+        <td class="label" colspan="3">Belum Dibayar / Hutang</td>
+        <td class="value">{{ $money($summary['total_unpaid']) }}</td>
     </tr>
 </table>
 
@@ -66,8 +68,10 @@
         <tr>
             <th>Tanggal</th>
             <th>Uraian</th>
-            <th class="right">Jumlah</th>
-            <th class="right">Diterima / Dibayar</th>
+            <th>Status</th>
+            <th class="right">Tagihan</th>
+            <th class="right">Sudah Dibayar</th>
+            <th class="right">Belum Dibayar</th>
             <th>Jatuh Tempo</th>
             <th class="right">Saldo Berjalan</th>
         </tr>
@@ -84,14 +88,16 @@
                         @endforeach
                     </div>
                 </td>
+                <td><span class="status @if($row['unpaid'] > 0) unpaid @endif">{{ $row['status'] }}</span></td>
                 <td class="right">{{ $money($row['amount']) }}</td>
                 <td class="right">{{ $money($row['paid']) }}</td>
+                <td class="right bold">{{ $money($row['unpaid']) }}</td>
                 <td>{{ $row['due'] }}</td>
                 <td class="right bold">{{ $money($row['running_balance']) }}</td>
             </tr>
         @empty
             <tr>
-                <td colspan="6">Tidak ada transaksi untuk customer dan periode ini.</td>
+                <td colspan="8">Tidak ada transaksi untuk customer dan periode ini.</td>
             </tr>
         @endforelse
     </tbody>

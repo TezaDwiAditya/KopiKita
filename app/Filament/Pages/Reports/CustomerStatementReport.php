@@ -78,17 +78,18 @@ class CustomerStatementReport extends Page
 
         return $this->transactions->map(function (Transaction $transaction) use (&$runningBalance): array {
             $amount = (int) $transaction->grand_total;
-            $paid = $transaction->status === 'paid'
-                ? (int) ($transaction->payment?->amount_paid ?? $transaction->grand_total)
-                : 0;
-            $runningBalance += $amount - $paid;
+            $paid = $this->paidAmount($transaction);
+            $unpaid = max($amount - $paid, 0);
+            $runningBalance += $unpaid;
 
             return [
                 'date' => $transaction->transaction_date->format('d M Y'),
                 'invoice' => $transaction->invoice_number,
                 'description' => 'Penjualan #'.$transaction->invoice_number.' ('.strtoupper($transaction->status).')',
+                'status' => $unpaid > 0 ? 'Belum Lunas' : 'Lunas',
                 'amount' => $amount,
                 'paid' => $paid,
+                'unpaid' => $unpaid,
                 'due' => $transaction->transaction_date->format('d M Y'),
                 'running_balance' => $runningBalance,
                 'items' => $transaction->items->map(fn ($item): array => [
@@ -106,15 +107,15 @@ class CustomerStatementReport extends Page
     {
         $transactions = $this->transactions;
         $totalSales = (int) $transactions->sum('grand_total');
-        $cashIn = (int) $transactions->sum(fn (Transaction $transaction): int => $transaction->status === 'paid'
-            ? (int) ($transaction->payment?->amount_paid ?? $transaction->grand_total)
-            : 0);
-        $receivable = (int) $transactions->where('status', 'draft')->sum('grand_total');
+        $cashIn = (int) $transactions->sum(fn (Transaction $transaction): int => $this->paidAmount($transaction));
+        $receivable = max($totalSales - $cashIn, 0);
 
         return [
             'transaction_count' => $transactions->count(),
             'total_sales' => $totalSales,
             'total_purchase' => 0,
+            'total_paid' => $cashIn,
+            'total_unpaid' => $receivable,
             'cash_in' => $cashIn,
             'cash_out' => 0,
             'receivable' => $receivable,
@@ -134,5 +135,17 @@ class CustomerStatementReport extends Page
     public function rupiah(int|float $amount): string
     {
         return 'Rp '.number_format((int) $amount, 0, ',', '.');
+    }
+
+    private function paidAmount(Transaction $transaction): int
+    {
+        if ($transaction->status !== 'paid') {
+            return 0;
+        }
+
+        $paid = (int) ($transaction->payment?->amount_paid ?? $transaction->grand_total);
+        $change = (int) ($transaction->payment?->change_amount ?? 0);
+
+        return min(max($paid - $change, 0), (int) $transaction->grand_total);
     }
 }

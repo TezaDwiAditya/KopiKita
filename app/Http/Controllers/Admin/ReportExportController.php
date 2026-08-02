@@ -49,21 +49,38 @@ class ReportExportController extends Controller
         return $this->download($format, 'reports.exports.customer-statement', $data, $filename);
     }
 
+    public function customerProductSales(Request $request, string $format): SymfonyResponse
+    {
+        $data = $this->customerProductSalesData($request);
+        $filename = 'laporan-penjualan-per-customer-'.$data['startDate'].'-'.$data['endDate'];
+
+        return $this->download($format, 'reports.exports.customer-product-sales', $data, $filename);
+    }
+
     private function download(string $format, string $view, array $data, string $filename): SymfonyResponse
     {
         abort_unless(in_array($format, ['pdf', 'excel'], true), 404);
 
         if ($format === 'pdf') {
             return Pdf::loadView($view, $data)
-                ->setPaper('a4', $view === 'reports.exports.customer-statement' ? 'portrait' : 'landscape')
-                ->download($filename.'.pdf');
+                ->setPaper('a4', in_array($view, [
+                    'reports.exports.customer-statement',
+                    'reports.exports.customer-product-sales',
+                ], true) ? 'portrait' : 'landscape')
+                ->download($filename.'.pdf', [
+                    'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+                    'Pragma' => 'no-cache',
+                    'Expires' => '0',
+                ]);
         }
 
         return response()
             ->view($view, $data)
             ->header('Content-Type', 'application/vnd.ms-excel; charset=UTF-8')
             ->header('Content-Disposition', 'attachment; filename="'.$filename.'.xls"')
-            ->header('Cache-Control', 'max-age=0');
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     private function salesData(Request $request): array
@@ -226,17 +243,18 @@ class ReportExportController extends Controller
         $runningBalance = 0;
         $rows = $transactions->map(function (Transaction $transaction) use (&$runningBalance): array {
             $amount = (int) $transaction->grand_total;
-            $paid = $transaction->status === 'paid'
-                ? (int) ($transaction->payment?->amount_paid ?? $transaction->grand_total)
-                : 0;
-            $runningBalance += $amount - $paid;
+            $paid = $this->paidAmount($transaction);
+            $unpaid = max($amount - $paid, 0);
+            $runningBalance += $unpaid;
 
             return [
                 'date' => $transaction->transaction_date->format('d M Y'),
                 'invoice' => $transaction->invoice_number,
                 'description' => 'Penjualan #'.$transaction->invoice_number.' ('.strtoupper($transaction->status).')',
+                'status' => $unpaid > 0 ? 'Belum Lunas' : 'Lunas',
                 'amount' => $amount,
                 'paid' => $paid,
+                'unpaid' => $unpaid,
                 'due' => $transaction->transaction_date->format('d M Y'),
                 'running_balance' => $runningBalance,
                 'items' => $transaction->items->map(fn (TransactionItem $item): array => [
@@ -250,10 +268,8 @@ class ReportExportController extends Controller
         });
 
         $totalSales = (int) $transactions->sum('grand_total');
-        $cashIn = (int) $transactions->sum(fn (Transaction $transaction): int => $transaction->status === 'paid'
-            ? (int) ($transaction->payment?->amount_paid ?? $transaction->grand_total)
-            : 0);
-        $receivable = (int) $transactions->where('status', 'draft')->sum('grand_total');
+        $cashIn = (int) $transactions->sum(fn (Transaction $transaction): int => $this->paidAmount($transaction));
+        $receivable = max($totalSales - $cashIn, 0);
 
         return [
             'title' => 'Laporan Customer',
@@ -266,9 +282,76 @@ class ReportExportController extends Controller
                 'transaction_count' => $transactions->count(),
                 'total_sales' => $totalSales,
                 'total_purchase' => 0,
+                'total_paid' => $cashIn,
+                'total_unpaid' => $receivable,
                 'cash_in' => $cashIn,
                 'cash_out' => 0,
                 'receivable' => $receivable,
+            ],
+            'generatedAt' => now(),
+        ];
+    }
+
+    private function paidAmount(Transaction $transaction): int
+    {
+        if ($transaction->status !== 'paid') {
+            return 0;
+        }
+
+        $paid = (int) ($transaction->payment?->amount_paid ?? $transaction->grand_total);
+        $change = (int) ($transaction->payment?->change_amount ?? 0);
+
+        return min(max($paid - $change, 0), (int) $transaction->grand_total);
+    }
+
+    private function customerProductSalesData(Request $request): array
+    {
+        $startDate = $request->query('start_date', now()->startOfMonth()->toDateString());
+        $endDate = $request->query('end_date', now()->toDateString());
+        $customerId = $request->integer('customer_id') ?: null;
+
+        $rows = Transaction::query()
+            ->with(['customer', 'payment', 'items'])
+            ->whereIn('status', ['draft', 'paid'])
+            ->whereDate('transaction_date', '>=', $startDate)
+            ->whereDate('transaction_date', '<=', $endDate)
+            ->when($customerId, fn ($query) => $query->where('customer_id', $customerId))
+            ->latest('transaction_date')
+            ->get()
+            ->map(function (Transaction $transaction): array {
+                $paid = $this->paidAmount($transaction);
+                $balance = max((int) $transaction->grand_total - $paid, 0);
+
+                return [
+                    'invoice' => $transaction->invoice_number,
+                    'customer_name' => $transaction->customer?->name ?? 'Walk-in Customer',
+                    'date' => $transaction->transaction_date->format('d M Y'),
+                    'qty' => (int) $transaction->items->sum('quantity'),
+                    'amount' => (int) $transaction->grand_total,
+                    'paid' => $paid,
+                    'balance' => $balance,
+                    'items' => $transaction->items->map(fn (TransactionItem $item): array => [
+                        'name' => trim($item->menu_name.' '.($item->variant_name ?: '')),
+                        'qty' => (int) $item->quantity,
+                        'price' => (int) $item->price,
+                        'subtotal' => (int) $item->subtotal,
+                    ]),
+                ];
+            });
+
+        return [
+            'title' => 'Laporan Penjualan',
+            'setting' => Setting::query()->first(),
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'rows' => $rows,
+            'summary' => [
+                'customer_count' => $rows->pluck('customer_name')->unique()->count(),
+                'transaction_count' => $rows->count(),
+                'qty' => $rows->sum('qty'),
+                'sales' => $rows->sum('amount'),
+                'paid' => $rows->sum('paid'),
+                'unpaid' => $rows->sum('balance'),
             ],
             'generatedAt' => now(),
         ];

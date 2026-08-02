@@ -16,4 +16,5 @@ Route::middleware(['web', 'auth'])->prefix('admin/report-exports')->name('admin.
     Route::get('/products/{format}', [ReportExportController::class, 'products'])->name('products');
     Route::get('/ingredients/{format}', [ReportExportController::class, 'ingredients'])->name('ingredients');
     Route::get('/customer-statement/{format}', [ReportExportController::class, 'customerStatement'])->name('customer-statement');
+    Route::get('/customer-product-sales/{format}', [ReportExportController::class, 'customerProductSales'])->name('customer-product-sales');
 });

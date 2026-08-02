@@ -21,6 +21,8 @@
         .statement-table th, .statement-table td { padding: 10px 12px; border-bottom: 1px solid rgb(229 231 235); text-align: left; vertical-align: top; }
         .statement-table th { font-size: 12px; text-transform: uppercase; color: rgb(107 114 128); }
         .item-detail { margin-top: 6px; color: rgb(107 114 128); font-size: 12px; line-height: 1.6; }
+        .status-pill { display: inline-flex; border-radius: 999px; padding: 3px 8px; font-size: 11px; font-weight: 800; background: rgb(220 252 231); color: rgb(22 101 52); }
+        .status-pill.unpaid { background: rgb(254 226 226); color: rgb(153 27 27); }
         .text-right { text-align: right !important; }
         .font-bold { font-weight: 800; }
         @media (max-width: 1000px) { .statement-filters, .summary-grid { grid-template-columns: 1fr; } .statement-header { flex-direction: column; } .statement-actions { flex-wrap: wrap; } }
@@ -68,10 +70,10 @@
         <div class="statement-card">
             <div class="summary-grid">
                 <div class="summary-item"><div class="summary-label">Total Penjualan</div><div class="summary-value">{{ $this->rupiah($this->summary['total_sales']) }}</div></div>
-                <div class="summary-item"><div class="summary-label">Total Pembelian</div><div class="summary-value">{{ $this->rupiah($this->summary['total_purchase']) }}</div></div>
-                <div class="summary-item"><div class="summary-label">Total Piutang</div><div class="summary-value">{{ $this->rupiah($this->summary['receivable']) }}</div></div>
+                <div class="summary-item"><div class="summary-label">Sudah Dibayar</div><div class="summary-value">{{ $this->rupiah($this->summary['total_paid']) }}</div></div>
+                <div class="summary-item"><div class="summary-label">Belum Dibayar / Hutang</div><div class="summary-value">{{ $this->rupiah($this->summary['total_unpaid']) }}</div></div>
                 <div class="summary-item"><div class="summary-label">Uang Masuk</div><div class="summary-value">{{ $this->rupiah($this->summary['cash_in']) }}</div></div>
-                <div class="summary-item"><div class="summary-label">Uang Keluar</div><div class="summary-value">{{ $this->rupiah($this->summary['cash_out']) }}</div></div>
+                <div class="summary-item"><div class="summary-label">Total Piutang</div><div class="summary-value">{{ $this->rupiah($this->summary['receivable']) }}</div></div>
                 <div class="summary-item"><div class="summary-label">Jumlah Transaksi</div><div class="summary-value">{{ number_format($this->summary['transaction_count'], 0, ',', '.') }}</div></div>
             </div>
         </div>
@@ -84,8 +86,10 @@
                         <tr>
                             <th>Tanggal</th>
                             <th>Uraian</th>
-                            <th class="text-right">Jumlah</th>
-                            <th class="text-right">Diterima / Dibayar</th>
+                            <th>Status</th>
+                            <th class="text-right">Tagihan</th>
+                            <th class="text-right">Sudah Dibayar</th>
+                            <th class="text-right">Belum Dibayar</th>
                             <th>Jatuh Tempo</th>
                             <th class="text-right">Saldo Berjalan</th>
                         </tr>
@@ -102,13 +106,15 @@
                                         @endforeach
                                     </div>
                                 </td>
+                                <td><span class="status-pill @if($row['unpaid'] > 0) unpaid @endif">{{ $row['status'] }}</span></td>
                                 <td class="text-right">{{ $this->rupiah($row['amount']) }}</td>
                                 <td class="text-right">{{ $this->rupiah($row['paid']) }}</td>
+                                <td class="text-right font-bold">{{ $this->rupiah($row['unpaid']) }}</td>
                                 <td>{{ $row['due'] }}</td>
                                 <td class="text-right font-bold">{{ $this->rupiah($row['running_balance']) }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="6">Tidak ada transaksi untuk customer dan periode ini.</td></tr>
+                            <tr><td colspan="8">Tidak ada transaksi untuk customer dan periode ini.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

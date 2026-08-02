@@ -217,13 +217,13 @@
             </div>
 
             <div class="pos-section">
-                <select wire:model="paymentMethod" class="pos-select">
+                <select wire:model.live="paymentMethod" class="pos-select">
                     <option value="cash">Cash</option>
                     <option value="qris">QRIS</option>
                     <option value="transfer">Transfer</option>
                     <option value="debit">Debit</option>
                 </select>
-                <input type="number" min="0" wire:model.blur="amountPaid" placeholder="Uang bayar" class="pos-input" />
+                <input type="number" min="0" wire:model.blur="amountPaid" placeholder="Uang bayar" class="pos-input" @disabled($paymentMethod !== 'cash') />
                 <div class="pos-total-row"><span>Kembalian</span><strong style="color: rgb(22 163 74);">Rp {{ number_format($this->changeAmount, 0, ',', '.') }}</strong></div>
             </div>
 

@@ -211,6 +211,18 @@ class Pos extends Page
         $this->recalculateTax();
     }
 
+    public function updatedPaymentMethod(): void
+    {
+        $this->syncNonCashAmountPaid();
+    }
+
+    public function updatedAmountPaid(): void
+    {
+        if ($this->paymentMethod !== 'cash') {
+            $this->syncNonCashAmountPaid();
+        }
+    }
+
     public function getSubtotalProperty(): int
     {
         return collect($this->cart)
@@ -255,6 +267,8 @@ class Pos extends Page
 
             return;
         }
+
+        $this->syncNonCashAmountPaid();
 
         if ($this->amountPaid < $this->grandTotal) {
             Notification::make()->title('Uang bayar kurang')->danger()->send();
@@ -362,6 +376,14 @@ class Pos extends Page
     private function recalculateTax(): void
     {
         $this->tax = $this->calculateTax();
+        $this->syncNonCashAmountPaid();
+    }
+
+    private function syncNonCashAmountPaid(): void
+    {
+        if ($this->paymentMethod !== 'cash') {
+            $this->amountPaid = $this->grandTotal;
+        }
     }
 
     private function resetCart(): void
