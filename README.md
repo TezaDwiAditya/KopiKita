@@ -69,14 +69,22 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 
 Pastikan Docker Desktop sudah berjalan, lalu jalankan perintah berikut dari root project:
 
+### Development
+
+Development memakai bind mount source code, Vite dev server, dan MySQL lokal di PC.
+
+Pastikan MySQL di PC sudah berjalan dan database `kopikita_dev` sudah dibuat. Dari dalam Docker, host database lokal diakses lewat `host.docker.internal`.
+
 ```bash
-docker compose up --build -d
+copy .env.development.example .env.development
+docker compose --env-file .env.development up --build -d
 ```
 
 Aplikasi bisa dibuka di:
 
 - Web: http://localhost:8080
 - Filament Admin: http://localhost:8080/admin
+- Vite: http://localhost:5173
 
 Buat user Filament pertama:
 
@@ -92,4 +100,27 @@ docker compose down
 docker compose down -v
 ```
 
-Catatan: `docker compose down -v` akan menghapus volume SQLite, storage, cache, dan data aplikasi di container.
+Catatan: `docker compose down -v` akan menghapus volume vendor, node_modules, storage, cache, dan database development.
+
+### Production
+
+Production memakai image build siap jalan, tanpa bind mount source code, dan asset frontend sudah dibuild di dalam image.
+
+```bash
+copy .env.production.example .env.production
+docker compose --env-file .env.production -f docker-compose.prod.yml up --build -d
+```
+
+Sebelum menjalankan production, ubah minimal nilai berikut di `.env.production`:
+
+- `APP_URL`
+- `DB_PASSWORD`
+- `APP_KEY`, buat dengan `php artisan key:generate --show`
+- `HTTP_PORT` jika tidak ingin memakai port `8080`
+
+Perintah production:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml logs -f
+docker compose --env-file .env.production -f docker-compose.prod.yml down
+```

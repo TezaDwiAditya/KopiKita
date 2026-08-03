@@ -13,6 +13,11 @@
         .report-table th, .report-table td { padding: 10px 12px; border-bottom: 1px solid rgb(229 231 235); text-align: left; }
         .report-table th { font-size: 12px; text-transform: uppercase; color: rgb(107 114 128); }
         .text-right { text-align: right !important; }
+        .status-pill { display: inline-flex; border-radius: 999px; padding: 4px 9px; font-size: 12px; font-weight: 800; white-space: nowrap; }
+        .status-healthy { background: rgb(220 252 231); color: rgb(22 101 52); }
+        .status-low { background: rgb(254 249 195); color: rgb(133 77 14); }
+        .status-danger { background: rgb(254 226 226); color: rgb(153 27 27); }
+        .status-muted { background: rgb(229 231 235); color: rgb(75 85 99); }
 
         .export-actions { display: flex; gap: 8px; align-items: center; }
         .export-btn { display: inline-flex; justify-content: center; border-radius: 10px; padding: 9px 12px; font-size: 13px; font-weight: 800; text-decoration: none; }
@@ -55,6 +60,59 @@
                             </tr>
                         @empty
                             <tr><td colspan="6">Tidak ada data produk.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="summary-grid">
+            <div class="report-card"><div class="summary-title">Total Produk/Varian</div><div class="summary-value">{{ number_format($this->priceSummary['products'], 0, ',', '.') }}</div></div>
+            <div class="report-card"><div class="summary-title">Produk Aktif</div><div class="summary-value">{{ number_format($this->priceSummary['active_products'], 0, ',', '.') }}</div></div>
+            <div class="report-card"><div class="summary-title">Rata-rata Margin</div><div class="summary-value">{{ number_format($this->priceSummary['average_margin'], 1, ',', '.') }}%</div></div>
+            <div class="report-card"><div class="summary-title">Perlu Ditinjau</div><div class="summary-value">{{ number_format($this->priceSummary['low_margin'] + $this->priceSummary['no_profit'], 0, ',', '.') }}</div></div>
+        </div>
+
+        <div class="report-card">
+            <h3 style="font-weight: 800; margin-bottom: 12px;">Evaluasi Harga Semua Produk</h3>
+            <div style="overflow-x: auto;">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Kategori</th>
+                            <th>Menu</th>
+                            <th>Varian</th>
+                            <th class="text-right">Harga Jual</th>
+                            <th class="text-right">Harga Modal</th>
+                            <th class="text-right">Keuntungan</th>
+                            <th class="text-right">Margin</th>
+                            <th class="text-right">Markup</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($this->priceRows as $row)
+                            @php
+                                $statusClass = match ($row['status']) {
+                                    'Sehat' => 'status-healthy',
+                                    'Margin Rendah' => 'status-low',
+                                    'Rugi / Impas' => 'status-danger',
+                                    default => 'status-muted',
+                                };
+                            @endphp
+                            <tr>
+                                <td>{{ $row['category'] }}</td>
+                                <td>{{ $row['menu'] }}</td>
+                                <td>{{ $row['variant'] }}</td>
+                                <td class="text-right">{{ $this->rupiah($row['selling_price']) }}</td>
+                                <td class="text-right">{{ $this->rupiah($row['cost_price']) }}</td>
+                                <td class="text-right"><strong>{{ $this->rupiah($row['profit']) }}</strong></td>
+                                <td class="text-right">{{ number_format($row['margin_percent'], 1, ',', '.') }}%</td>
+                                <td class="text-right">{{ number_format($row['markup_percent'], 1, ',', '.') }}%</td>
+                                <td><span class="status-pill {{ $statusClass }}">{{ $row['status'] }}</span></td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="9">Tidak ada data produk.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

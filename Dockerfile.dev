@@ -1,0 +1,33 @@
+FROM php:8.4-fpm-alpine
+
+WORKDIR /var/www/html
+
+RUN apk add --no-cache \
+    bash \
+    git \
+    icu-dev \
+    libzip-dev \
+    linux-headers \
+    mysql-client \
+    oniguruma-dev \
+    sqlite-dev \
+    zip \
+    unzip \
+    && docker-php-ext-install \
+    bcmath \
+    intl \
+    mbstring \
+    pcntl \
+    pdo_mysql \
+    pdo_sqlite \
+    zip
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint
+
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint \
+    && chmod +x /usr/local/bin/entrypoint
+
+ENTRYPOINT ["entrypoint"]
+CMD ["php-fpm"]

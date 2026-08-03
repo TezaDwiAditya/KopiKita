@@ -3,19 +3,27 @@ set -e
 
 cd /var/www/html
 
+if [ "${INSTALL_COMPOSER_DEPS:-false}" = "true" ] && [ ! -f vendor/autoload.php ]; then
+    composer install --no-interaction --prefer-dist
+fi
+
 if [ ! -f public/index.php ] && [ -d /usr/src/app-public ]; then
     cp -a /usr/src/app-public/. public/
 fi
 
 if [ ! -f .env ]; then
-    if [ -f .env.docker ]; then
+    if [ "${APP_ENV:-local}" = "production" ] && [ -f .env.production ]; then
+        cp .env.production .env
+    elif [ -f .env.development ]; then
+        cp .env.development .env
+    elif [ -f .env.docker ]; then
         cp .env.docker .env
     else
         cp .env.example .env
     fi
 fi
 
-mkdir -p database-data
+mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache database-data
 
 if [ ! -f database-data/database.sqlite ]; then
     touch database-data/database.sqlite
@@ -46,8 +54,16 @@ if ! grep -q '^APP_KEY=base64:' .env; then
     php artisan key:generate --force --no-interaction
 fi
 
-php artisan migrate --force --no-interaction
+if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
+    php artisan migrate --force --no-interaction
+fi
+
 php artisan storage:link --force || true
-php artisan optimize:clear --no-interaction
+
+if [ "${APP_ENV:-local}" = "production" ]; then
+    php artisan optimize --no-interaction
+else
+    php artisan optimize:clear --no-interaction
+fi
 
 exec "$@"

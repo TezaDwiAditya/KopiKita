@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\IngredientStock;
+use App\Models\Menu;
 use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
@@ -160,12 +161,15 @@ class ReportExportController extends Controller
             })
             ->sortByDesc('qty')
             ->values();
+        $priceRows = $this->productPriceRows();
 
         return [
             'title' => 'Laporan Produk',
             'startDate' => $startDate,
             'endDate' => $endDate,
             'rows' => $rows,
+            'priceRows' => $priceRows,
+            'priceSummary' => $this->productPriceSummary($priceRows),
             'summary' => [
                 'qty' => $rows->sum('qty'),
                 'sales' => $rows->sum('sales'),
@@ -173,6 +177,90 @@ class ReportExportController extends Controller
                 'gross_profit' => $rows->sum('gross_profit'),
             ],
         ];
+    }
+
+    private function productPriceRows(): Collection
+    {
+        return Menu::query()
+            ->with(['category', 'variants'])
+            ->orderBy('name')
+            ->get()
+            ->flatMap(function (Menu $menu): Collection {
+                if ($menu->variants->isEmpty()) {
+                    return collect([$this->productPriceRow(
+                        $menu->category?->name ?? '-',
+                        $menu->name,
+                        'Regular',
+                        (int) $menu->selling_price,
+                        (int) $menu->cost_price,
+                        (bool) $menu->is_active,
+                    )]);
+                }
+
+                return $menu->variants->map(fn ($variant): array => $this->productPriceRow(
+                    $menu->category?->name ?? '-',
+                    $menu->name,
+                    $variant->name,
+                    (int) $variant->selling_price,
+                    (int) $variant->cost_price,
+                    (bool) $variant->is_active && (bool) $menu->is_active,
+                ));
+            })
+            ->sortBy([
+                ['menu', 'asc'],
+                ['variant', 'asc'],
+            ])
+            ->values();
+    }
+
+    private function productPriceSummary(Collection $rows): array
+    {
+        $activeRows = $rows->where('is_active', true);
+
+        return [
+            'products' => $rows->count(),
+            'active_products' => $activeRows->count(),
+            'average_margin' => round((float) $activeRows->avg('margin_percent'), 1),
+            'low_margin' => $activeRows->where('margin_percent', '<', 30)->count(),
+            'no_profit' => $activeRows->where('profit', '<=', 0)->count(),
+        ];
+    }
+
+    private function productPriceRow(string $category, string $menu, string $variant, int $sellingPrice, int $costPrice, bool $isActive): array
+    {
+        $profit = $sellingPrice - $costPrice;
+        $marginPercent = $sellingPrice > 0 ? round(($profit / $sellingPrice) * 100, 1) : 0.0;
+        $markupPercent = $costPrice > 0 ? round(($profit / $costPrice) * 100, 1) : 0.0;
+
+        return [
+            'category' => $category,
+            'menu' => $menu,
+            'variant' => $variant,
+            'selling_price' => $sellingPrice,
+            'cost_price' => $costPrice,
+            'profit' => $profit,
+            'margin_percent' => $marginPercent,
+            'markup_percent' => $markupPercent,
+            'status' => $this->productPriceStatus($profit, $marginPercent, $isActive),
+            'is_active' => $isActive,
+        ];
+    }
+
+    private function productPriceStatus(int $profit, float $marginPercent, bool $isActive): string
+    {
+        if (! $isActive) {
+            return 'Nonaktif';
+        }
+
+        if ($profit <= 0) {
+            return 'Rugi / Impas';
+        }
+
+        if ($marginPercent < 30) {
+            return 'Margin Rendah';
+        }
+
+        return 'Sehat';
     }
 
     private function ingredientData(Request $request): array
