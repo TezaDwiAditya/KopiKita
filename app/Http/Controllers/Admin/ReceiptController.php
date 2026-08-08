@@ -18,4 +18,13 @@ class ReceiptController extends Controller
             'transaction' => $transaction,
         ]);
     }
+
+    public function orderPrint(Transaction $transaction): View
+    {
+        $transaction->load(['customer', 'items.menu.category']);
+
+        return view('receipts.order-print', [
+            'transaction' => $transaction,
+        ]);
+    }
 }

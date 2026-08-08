@@ -108,6 +108,12 @@ class TransactionsTable
                     ->color('gray')
                     ->url(fn (Transaction $record): string => route('admin.transactions.receipt', $record))
                     ->openUrlInNewTab(),
+                Action::make('print_order')
+                    ->label('Print Pesanan')
+                    ->icon('heroicon-o-document-text')
+                    ->color('gray')
+                    ->url(fn (Transaction $record): string => route('admin.transactions.order-print', $record))
+                    ->openUrlInNewTab(),
                 Action::make('void')
                     ->label('Void')
                     ->icon('heroicon-o-no-symbol')

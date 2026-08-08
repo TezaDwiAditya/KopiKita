@@ -11,6 +11,9 @@ Route::get('/', function () {
 Route::middleware(['web', 'auth'])->get('/admin/transactions/{transaction}/receipt', ReceiptController::class)
     ->name('admin.transactions.receipt');
 
+Route::middleware(['web', 'auth'])->get('/admin/transactions/{transaction}/order-print', [ReceiptController::class, 'orderPrint'])
+    ->name('admin.transactions.order-print');
+
 Route::middleware(['web', 'auth'])->prefix('admin/report-exports')->name('admin.report-exports.')->group(function (): void {
     Route::get('/sales/{format}', [ReportExportController::class, 'sales'])->name('sales');
     Route::get('/products/{format}', [ReportExportController::class, 'products'])->name('products');

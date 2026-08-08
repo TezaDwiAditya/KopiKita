@@ -92,6 +92,21 @@ class PosTransactionTest extends TestCase
             ->assertSee('Test Americano');
     }
 
+    public function test_order_print_route_can_render_printable_order_sheet(): void
+    {
+        $user = User::factory()->create();
+        $transaction = $this->createDraftTransaction($user);
+
+        $this->actingAs($user)
+            ->get(route('admin.transactions.order-print', $transaction))
+            ->assertOk()
+            ->assertSee('No Pesanan')
+            ->assertSee($transaction->invoice_number)
+            ->assertSee('Test Americano')
+            ->assertSee('Test Coffee')
+            ->assertSee('Total');
+    }
+
     private function createDraftTransaction(User $user, string $invoiceNumber = 'INV-TEST-001'): Transaction
     {
         $category = Category::query()->create([
