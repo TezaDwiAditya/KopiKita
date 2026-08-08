@@ -6,6 +6,11 @@ use App\Filament\Widgets\BestSellingProductsTable;
 use App\Filament\Widgets\LowStockIngredientsTable;
 use App\Filament\Widgets\SalesChart;
 use App\Filament\Widgets\SalesStatsOverview;
+use App\Filament\Pages\Reports\CustomerProductSalesReport;
+use App\Filament\Pages\Reports\CustomerStatementReport;
+use App\Filament\Pages\Reports\IngredientUsageReport;
+use App\Filament\Pages\Reports\ProductReport;
+use App\Filament\Pages\Reports\SalesReport;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -39,6 +44,11 @@ class AdminPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
                 Dashboard::class,
+                SalesReport::class,
+                ProductReport::class,
+                IngredientUsageReport::class,
+                CustomerStatementReport::class,
+                CustomerProductSalesReport::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([

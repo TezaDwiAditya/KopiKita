@@ -2,11 +2,17 @@
 
 namespace App\Filament\Resources\Menus\Tables;
 
+use App\Filament\Forms\Components\MoneyInput;
+use App\Models\MenuVariant;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -64,6 +70,81 @@ class MenusTable
                 TernaryFilter::make('is_active')->label('Status Aktif'),
             ])
             ->recordActions([
+                Action::make('change_prices')
+                    ->label('Ubah Harga')
+                    ->icon('heroicon-o-currency-dollar')
+                    ->color('warning')
+                    ->modalHeading(fn ($record): string => 'Ubah Harga '.$record->name)
+                    ->fillForm(fn ($record): array => [
+                        'variants' => $record->variants
+                            ->sortBy('sort_order')
+                            ->map(fn ($variant): array => [
+                                'id' => $variant->id,
+                                'name' => $variant->name,
+                                'selling_price' => $variant->selling_price,
+                                'cost_price' => $variant->cost_price,
+                            ])
+                            ->values()
+                            ->all(),
+                    ])
+                    ->form([
+                        Repeater::make('variants')
+                            ->label('Varian Produk')
+                            ->schema([
+                                Hidden::make('id'),
+                                TextInput::make('name')
+                                    ->label('Varian')
+                                    ->disabled()
+                                    ->dehydrated(),
+                                MoneyInput::make('selling_price')
+                                    ->label('Harga Jual Baru')
+                                    ->required()
+                                    ->minValue(0),
+                                MoneyInput::make('cost_price')
+                                    ->label('Harga Modal Baru')
+                                    ->required()
+                                    ->minValue(0),
+                            ])
+                            ->columns(3)
+                            ->addable(false)
+                            ->deletable(false)
+                            ->reorderable(false)
+                            ->columnSpanFull(),
+                    ])
+                    ->action(function ($record, array $data): void {
+                        foreach (($data['variants'] ?? []) as $variantData) {
+                            $variant = MenuVariant::query()
+                                ->where('menu_id', $record->id)
+                                ->find($variantData['id'] ?? null);
+
+                            if (! $variant) {
+                                continue;
+                            }
+
+                            $sellingPrice = (int) preg_replace('/\D/', '', (string) ($variantData['selling_price'] ?? 0));
+                            $costPrice = (int) preg_replace('/\D/', '', (string) ($variantData['cost_price'] ?? 0));
+
+                            $variant->update([
+                                'selling_price' => $sellingPrice,
+                                'cost_price' => $costPrice,
+                                'profit_amount' => max(0, $sellingPrice - $costPrice),
+                            ]);
+                        }
+
+                        $firstVariant = $record->variants()->orderBy('sort_order')->first();
+
+                        if ($firstVariant) {
+                            $record->update([
+                                'selling_price' => (int) $firstVariant->selling_price,
+                                'cost_price' => (int) $firstVariant->cost_price,
+                            ]);
+                        }
+
+                        Notification::make()
+                            ->title('Harga produk berhasil diperbarui')
+                            ->success()
+                            ->send();
+                    }),
                 Action::make('toggle_active')
                     ->label(fn ($record): string => $record->is_active ? 'Nonaktifkan' : 'Aktifkan')
                     ->icon(fn ($record): string => $record->is_active ? 'heroicon-o-eye-slash' : 'heroicon-o-eye')

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\Ingredient;
 use App\Models\IngredientStock;
 use App\Models\Menu;
 use App\Models\Setting;
@@ -292,17 +293,73 @@ class ReportExportController extends Controller
             })
             ->sortByDesc('net_used')
             ->values();
+        $priceRows = $this->ingredientPriceRows();
 
         return [
             'title' => 'Laporan Penggunaan Bahan',
             'startDate' => $startDate,
             'endDate' => $endDate,
             'rows' => $rows,
+            'priceRows' => $priceRows,
+            'priceSummary' => $this->ingredientPriceSummary($priceRows),
             'summary' => [
                 'ingredients' => $rows->count(),
                 'value' => $rows->sum('value'),
             ],
         ];
+    }
+
+    private function ingredientPriceRows(): Collection
+    {
+        return Ingredient::query()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Ingredient $ingredient): array => $this->ingredientPriceRow($ingredient))
+            ->values();
+    }
+
+    private function ingredientPriceSummary(Collection $rows): array
+    {
+        return [
+            'ingredients' => $rows->count(),
+            'stock_value' => $rows->sum('stock_value'),
+            'average_price' => round((float) $rows->avg('price'), 0),
+            'low_stock' => $rows->where('is_low_stock', true)->count(),
+            'missing_price' => $rows->where('price', '<=', 0)->count(),
+        ];
+    }
+
+    private function ingredientPriceRow(Ingredient $ingredient): array
+    {
+        $price = (int) $ingredient->price;
+        $currentStock = (int) $ingredient->current_stock;
+        $minimumStock = (int) $ingredient->minimum_stock;
+        $stockValue = $price * $currentStock;
+        $isLowStock = $minimumStock > 0 && $currentStock <= $minimumStock;
+
+        return [
+            'ingredient' => $ingredient->name,
+            'unit' => $ingredient->unit,
+            'price' => $price,
+            'current_stock' => $currentStock,
+            'minimum_stock' => $minimumStock,
+            'stock_value' => $stockValue,
+            'is_low_stock' => $isLowStock,
+            'status' => $this->ingredientPriceStatus($price, $isLowStock),
+        ];
+    }
+
+    private function ingredientPriceStatus(int $price, bool $isLowStock): string
+    {
+        if ($price <= 0) {
+            return 'Harga Belum Diisi';
+        }
+
+        if ($isLowStock) {
+            return 'Stok Rendah';
+        }
+
+        return 'Aman';
     }
 
     private function customerStatementData(Request $request): array

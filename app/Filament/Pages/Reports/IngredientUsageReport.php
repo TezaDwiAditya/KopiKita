@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages\Reports;
 
+use App\Models\Ingredient;
 use App\Models\IngredientStock;
 use BackedEnum;
 use Filament\Pages\Page;
@@ -17,9 +18,9 @@ class IngredientUsageReport extends Page
 
     protected static string|UnitEnum|null $navigationGroup = 'Laporan';
 
-    protected static ?string $navigationLabel = 'Penggunaan Bahan';
+    protected static ?string $navigationLabel = 'Laporan Bahan Baku';
 
-    protected static ?string $title = 'Laporan Penggunaan Bahan';
+    protected static ?string $title = 'Laporan Bahan Baku';
 
     protected static ?int $navigationSort = 120;
 
@@ -67,6 +68,61 @@ class IngredientUsageReport extends Page
             'ingredients' => $this->rows->count(),
             'value' => $this->rows->sum('value'),
         ];
+    }
+
+    public function getPriceRowsProperty(): Collection
+    {
+        return Ingredient::query()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Ingredient $ingredient): array => $this->priceRow($ingredient))
+            ->values();
+    }
+
+    public function getPriceSummaryProperty(): array
+    {
+        $rows = $this->priceRows;
+
+        return [
+            'ingredients' => $rows->count(),
+            'stock_value' => $rows->sum('stock_value'),
+            'average_price' => round((float) $rows->avg('price'), 0),
+            'low_stock' => $rows->where('is_low_stock', true)->count(),
+            'missing_price' => $rows->where('price', '<=', 0)->count(),
+        ];
+    }
+
+    private function priceRow(Ingredient $ingredient): array
+    {
+        $price = (int) $ingredient->price;
+        $currentStock = (int) $ingredient->current_stock;
+        $minimumStock = (int) $ingredient->minimum_stock;
+        $stockValue = $price * $currentStock;
+        $isLowStock = $minimumStock > 0 && $currentStock <= $minimumStock;
+
+        return [
+            'ingredient' => $ingredient->name,
+            'unit' => $ingredient->unit,
+            'price' => $price,
+            'current_stock' => $currentStock,
+            'minimum_stock' => $minimumStock,
+            'stock_value' => $stockValue,
+            'is_low_stock' => $isLowStock,
+            'status' => $this->priceStatus($price, $isLowStock),
+        ];
+    }
+
+    private function priceStatus(int $price, bool $isLowStock): string
+    {
+        if ($price <= 0) {
+            return 'Harga Belum Diisi';
+        }
+
+        if ($isLowStock) {
+            return 'Stok Rendah';
+        }
+
+        return 'Aman';
     }
 
     public function rupiah(int|float $amount): string

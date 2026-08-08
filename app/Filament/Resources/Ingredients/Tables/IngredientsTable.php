@@ -2,10 +2,13 @@
 
 namespace App\Filament\Resources\Ingredients\Tables;
 
+use App\Filament\Forms\Components\MoneyInput;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -37,6 +40,30 @@ class IngredientsTable
                     }),
             ])
             ->recordActions([
+                Action::make('change_price')
+                    ->label('Ubah Harga')
+                    ->icon('heroicon-o-currency-dollar')
+                    ->color('warning')
+                    ->modalHeading(fn ($record): string => 'Ubah Harga '.$record->name)
+                    ->fillForm(fn ($record): array => [
+                        'price' => $record->price,
+                    ])
+                    ->form([
+                        MoneyInput::make('price')
+                            ->label('Harga per Satuan Baru')
+                            ->required()
+                            ->minValue(0),
+                    ])
+                    ->action(function ($record, array $data): void {
+                        $record->update([
+                            'price' => (int) preg_replace('/\D/', '', (string) ($data['price'] ?? 0)),
+                        ]);
+
+                        Notification::make()
+                            ->title('Harga bahan baku berhasil diperbarui')
+                            ->success()
+                            ->send();
+                    }),
                 ViewAction::make(),
                 EditAction::make(),
             ])
