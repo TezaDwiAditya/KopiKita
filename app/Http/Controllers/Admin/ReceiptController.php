@@ -21,9 +21,10 @@ class ReceiptController extends Controller
 
     public function orderPrint(Transaction $transaction): View
     {
-        $transaction->load(['customer', 'items.menu.category']);
+        $transaction->load(['cashier', 'customer', 'items.menu.category']);
 
         return view('receipts.order-print', [
+            'setting' => Setting::query()->first(),
             'transaction' => $transaction,
         ]);
     }

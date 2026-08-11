@@ -205,6 +205,23 @@ class Pos extends Page
         $this->recalculateTax();
     }
 
+    public function duplicateItem(string|int $cartKey): void
+    {
+        if (! isset($this->cart[$cartKey])) {
+            return;
+        }
+
+        $newCartKey = $cartKey.'-'.uniqid();
+
+        $this->cart[$newCartKey] = [
+            ...$this->cart[$cartKey],
+            'qty' => 1,
+            'note' => '',
+        ];
+
+        $this->recalculateTax();
+    }
+
     public function updatedDiscount(): void
     {
         $this->discount = max(0, (int) $this->discount);
@@ -389,6 +406,8 @@ class Pos extends Page
     private function resetCart(): void
     {
         $this->cart = [];
+        $this->customerId = null;
+        $this->customerSearch = '';
         $this->discount = 0;
         $this->tax = 0;
         $this->amountPaid = 0;

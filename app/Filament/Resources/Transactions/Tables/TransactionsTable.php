@@ -70,7 +70,7 @@ class TransactionsTable
                     ->color('success')
                     ->visible(fn (Transaction $record): bool => $record->status === 'draft')
                     ->modalSubmitActionLabel('Bayar')
-                    ->form([
+                    ->form(fn (Transaction $record): array => [
                         Select::make('method')
                             ->label('Metode Pembayaran')
                             ->options([
@@ -80,6 +80,12 @@ class TransactionsTable
                                 'debit' => 'Debit',
                             ])
                             ->default('cash')
+                            ->live()
+                            ->afterStateUpdated(function (?string $state, callable $set) use ($record): void {
+                                if ($state !== 'cash') {
+                                    $set('amount_paid', $record->grand_total);
+                                }
+                            })
                             ->required(),
                         MoneyInput::make('amount_paid')
                             ->label('Uang Bayar')

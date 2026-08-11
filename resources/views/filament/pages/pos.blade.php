@@ -50,6 +50,7 @@
         .pos-cart-item { border: 1px solid rgb(229 231 235); border-radius: 14px; padding: 12px; }
         .dark .pos-cart-item { border-color: rgb(55 65 81); }
         .pos-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .pos-item-actions { display: inline-flex; align-items: center; gap: 10px; }
         .pos-item-name { font-weight: 800; color: rgb(17 24 39); }
         .dark .pos-item-name { color: white; }
         .pos-muted { color: rgb(107 114 128); font-size: 13px; }
@@ -150,7 +151,10 @@
                                 <div class="pos-item-name">{{ $item['name'] }} @if ($item['variant_name'] ?? null) - {{ $item['variant_name'] }} @endif</div>
                                 <div class="pos-muted">Rp {{ number_format($item['price'], 0, ',', '.') }}</div>
                             </div>
-                            <button type="button" wire:click="removeItem('{{ $menuId }}')" class="pos-link-danger">Hapus</button>
+                            <div class="pos-item-actions">
+                                <button type="button" wire:click="duplicateItem('{{ $menuId }}')" class="pos-link-danger" style="color: rgb(217 119 6);">Pisah</button>
+                                <button type="button" wire:click="removeItem('{{ $menuId }}')" class="pos-link-danger">Hapus</button>
+                            </div>
                         </div>
                         <div class="pos-row" style="margin-top: 12px;">
                             <div class="pos-qty">
@@ -205,13 +209,19 @@
                     </div>
                 </div>
 
-                <input type="date" wire:model.live="transactionDate" class="pos-input" />
+                <input
+                    type="date"
+                    wire:model.live="transactionDate"
+                    class="pos-input"
+                    onclick="this.showPicker?.()"
+                    onfocus="this.showPicker?.()"
+                />
                 <textarea wire:model.blur="note" rows="2" placeholder="Catatan transaksi" class="pos-textarea"></textarea>
             </div>
 
             <div class="pos-section">
                 <div class="pos-total-row"><span>Subtotal</span><strong>Rp {{ number_format($this->subtotal, 0, ',', '.') }}</strong></div>
-                <div class="pos-total-row"><span>Diskon</span><input type="number" min="0" wire:model.blur="discount" class="pos-input" style="width: 150px; text-align: right;" /></div>
+                <div class="pos-total-row"><span>Diskon</span><input type="number" min="0" wire:model.live.debounce.300ms="discount" class="pos-input" style="width: 150px; text-align: right;" /></div>
                 <div class="pos-total-row"><span>Pajak</span><strong>Rp {{ number_format($tax, 0, ',', '.') }}</strong></div>
                 <div class="pos-total-row"><span><strong>Grand Total</strong></span><span class="pos-grand">Rp {{ number_format($this->grandTotal, 0, ',', '.') }}</span></div>
             </div>

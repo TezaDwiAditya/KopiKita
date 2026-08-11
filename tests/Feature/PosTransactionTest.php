@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\Pos;
 use App\Models\Category;
+use App\Models\Customer;
 use App\Models\Ingredient;
 use App\Models\Menu;
 use App\Models\Recipe;
@@ -12,6 +14,7 @@ use App\Models\User;
 use App\Services\TransactionService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Gate;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class PosTransactionTest extends TestCase
@@ -92,6 +95,35 @@ class PosTransactionTest extends TestCase
             ->assertSee('Test Americano');
     }
 
+    public function test_pos_save_draft_resets_selected_customer(): void
+    {
+        $user = User::factory()->create();
+        $customer = Customer::query()->create([
+            'name' => 'Test Customer',
+            'phone_number' => '0800000001',
+        ]);
+        $menu = $this->createMenu();
+
+        $this->actingAs($user);
+
+        Livewire::test(Pos::class)
+            ->set('customerId', $customer->id)
+            ->set('customerSearch', $customer->name)
+            ->set('cart', [
+                (string) $menu->id => [
+                    'menu_id' => $menu->id,
+                    'name' => $menu->name,
+                    'price' => $menu->selling_price,
+                    'qty' => 1,
+                    'note' => '',
+                ],
+            ])
+            ->call('saveDraft')
+            ->assertSet('customerId', null)
+            ->assertSet('customerSearch', '')
+            ->assertSet('cart', []);
+    }
+
     public function test_order_print_route_can_render_printable_order_sheet(): void
     {
         $user = User::factory()->create();
@@ -109,21 +141,7 @@ class PosTransactionTest extends TestCase
 
     private function createDraftTransaction(User $user, string $invoiceNumber = 'INV-TEST-001'): Transaction
     {
-        $category = Category::query()->create([
-            'name' => 'Test Coffee',
-            'slug' => 'test-coffee-'.uniqid(),
-            'is_active' => true,
-        ]);
-
-        $menu = Menu::query()->create([
-            'category_id' => $category->id,
-            'name' => 'Test Americano',
-            'slug' => 'test-americano-'.uniqid(),
-            'selling_price' => 15000,
-            'cost_price' => 5000,
-            'is_active' => true,
-            'photo_path' => null,
-        ]);
+        $menu = $this->createMenu();
 
         $espresso = Ingredient::query()->create([
             'name' => 'Test Espresso',
@@ -175,5 +193,24 @@ class PosTransactionTest extends TestCase
         ]);
 
         return $transaction;
+    }
+
+    private function createMenu(): Menu
+    {
+        $category = Category::query()->create([
+            'name' => 'Test Coffee',
+            'slug' => 'test-coffee-'.uniqid(),
+            'is_active' => true,
+        ]);
+
+        return Menu::query()->create([
+            'category_id' => $category->id,
+            'name' => 'Test Americano',
+            'slug' => 'test-americano-'.uniqid(),
+            'selling_price' => 15000,
+            'cost_price' => 5000,
+            'is_active' => true,
+            'photo_path' => null,
+        ]);
     }
 }
