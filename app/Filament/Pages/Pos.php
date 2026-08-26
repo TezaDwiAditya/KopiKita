@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\ItemCustomOption;
 use App\Models\Menu;
 use App\Models\MenuVariant;
 use App\Models\Setting;
@@ -105,6 +106,15 @@ class Pos extends Page
         return $this->customerId ? Customer::query()->find($this->customerId) : null;
     }
 
+    public function getItemCustomOptionsProperty(): Collection
+    {
+        return ItemCustomOption::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->pluck('name');
+    }
+
     public function updatedCustomerSearch(): void
     {
         if ($this->selectedCustomer?->name !== $this->customerSearch) {
@@ -203,6 +213,28 @@ class Pos extends Page
     {
         unset($this->cart[$cartKey]);
         $this->recalculateTax();
+    }
+
+    public function toggleItemCustom(string|int $cartKey, string $custom): void
+    {
+        if (! isset($this->cart[$cartKey])) {
+            return;
+        }
+
+        $customs = $this->parseItemCustoms($this->cart[$cartKey]['note'] ?? '');
+
+        if (in_array($custom, $customs, true)) {
+            $customs = array_values(array_filter($customs, fn (string $value): bool => $value !== $custom));
+        } else {
+            $customs[] = $custom;
+        }
+
+        $this->cart[$cartKey]['note'] = implode(', ', $customs);
+    }
+
+    public function itemHasCustom(array $item, string $custom): bool
+    {
+        return in_array($custom, $this->parseItemCustoms($item['note'] ?? ''), true);
     }
 
     public function duplicateItem(string|int $cartKey): void
@@ -401,6 +433,16 @@ class Pos extends Page
         if ($this->paymentMethod !== 'cash') {
             $this->amountPaid = $this->grandTotal;
         }
+    }
+
+    private function parseItemCustoms(?string $note): array
+    {
+        return collect(explode(',', (string) $note))
+            ->map(fn (string $value): string => trim($value))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function resetCart(): void

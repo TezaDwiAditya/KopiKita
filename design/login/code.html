@@ -1,0 +1,240 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Botanical Brews - Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Literata:opsz,wght@7..72,400;7..72,600;7..72,700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed-dim": "#dec1b3",
+                      "on-background": "#1a1c19",
+                      "inverse-surface": "#2f312e",
+                      "background": "#fafaf5",
+                      "outline": "#81756f",
+                      "error": "#ba1a1a",
+                      "surface-container-high": "#e8e8e3",
+                      "on-secondary-fixed-variant": "#2f4e33",
+                      "on-primary-container": "#aa9084",
+                      "on-primary-fixed-variant": "#574238",
+                      "primary-container": "#3c2a21",
+                      "on-surface": "#1a1c19",
+                      "on-tertiary": "#ffffff",
+                      "surface-variant": "#e3e3de",
+                      "surface-container-highest": "#e3e3de",
+                      "on-secondary": "#ffffff",
+                      "on-surface-variant": "#4f4540",
+                      "on-secondary-fixed": "#03210b",
+                      "on-primary": "#ffffff",
+                      "tertiary-fixed-dim": "#cec79d",
+                      "surface-container-low": "#f4f4ef",
+                      "tertiary": "#645f3c",
+                      "on-secondary-container": "#4a6a4d",
+                      "primary": "#25160e",
+                      "error-container": "#ffdad6",
+                      "inverse-on-surface": "#f1f1ec",
+                      "primary-fixed": "#fbdcce",
+                      "tertiary-container": "#b2ac83",
+                      "on-tertiary-fixed": "#1f1c02",
+                      "surface-container": "#eeeee9",
+                      "secondary": "#466649",
+                      "on-error-container": "#93000a",
+                      "secondary-fixed-dim": "#acd0ad",
+                      "on-error": "#ffffff",
+                      "secondary-fixed": "#c8ecc8",
+                      "outline-variant": "#d3c3bd",
+                      "surface-container-lowest": "#ffffff",
+                      "on-primary-fixed": "#281810",
+                      "surface": "#fafaf5",
+                      "on-tertiary-fixed-variant": "#4c4827",
+                      "surface-dim": "#dadad5",
+                      "on-tertiary-container": "#444020",
+                      "surface-bright": "#fafaf5",
+                      "surface-tint": "#705a4f",
+                      "inverse-primary": "#dec1b3",
+                      "secondary-container": "#c5e9c5",
+                      "tertiary-fixed": "#ebe4b7"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "stack-md": "16px",
+                      "gutter": "24px",
+                      "container-max": "1280px",
+                      "unit": "8px",
+                      "margin-mobile": "20px",
+                      "margin-desktop": "64px",
+                      "stack-sm": "8px",
+                      "stack-lg": "32px"
+              },
+              "fontFamily": {
+                      "label-sm": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "body-lg": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "headline-md-mobile": [
+                              "Literata"
+                      ],
+                      "headline-md": [
+                              "Literata"
+                      ],
+                      "display-lg": [
+                              "Literata"
+                      ],
+                      "label-md": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "body-md": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "title-lg": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "display-lg-mobile": [
+                              "Literata"
+                      ]
+              },
+              "fontSize": {
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "title-lg": [
+                              "20px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg-mobile": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .ambient-shadow {
+            box-shadow: 0 10px 25px -5px rgba(60, 42, 33, 0.08), 0 8px 10px -6px rgba(60, 42, 33, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col md:flex-row antialiased">
+<!-- Left Hero Image (Desktop only) -->
+<div class="hidden md:block md:w-1/2 relative bg-surface-container-low" data-alt="A beautiful, cozy interior of a modern coffee shop. Sunlight streams through large windows, illuminating lush green hanging plants and potted monsteras. The space features warm woods, soft parchment walls, and a relaxed, slow-coffee atmosphere. Professional high-quality photography, soft morning light, inviting and warm mood. Botanical and organic aesthetic." style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuABZL9YePKdZNaks2PFR3321T2jlUDUFpH9Vj3sCm_O3k7CaC0G3YUZV48_bmr1018b0z-Gp4n2JJUCAB_sLpwfWWFS8Z-dN5RslT5Jd-2CT-ob33IedV24Z9VVg53zCNnq_T6WGTjSFh0jNzThv6fBsCOLXl_FFEiQhrxqPcjhUozb7tl8O1l1cAs1wYSsMEKP8u2Ux6fOi3kgAtaMuw2zK-kMfniHeY8cqoZaI4p2hRIp0aefXTE1CQ&quot;);">
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+<div class="absolute bottom-margin-desktop left-margin-desktop text-white max-w-md">
+<h1 class="font-display-lg text-display-lg mb-stack-md">KopiKita</h1>
+<p class="font-body-lg text-body-lg opacity-90">Experience the perfect blend of organic roasts and botanical serenity.</p>
+</div>
+</div>
+<!-- Right Login Form -->
+<div class="w-full md:w-1/2 flex flex-col justify-center items-center p-margin-mobile md:p-margin-desktop bg-background min-h-screen">
+<div class="w-full max-w-md">
+<!-- Header -->
+<div class="text-center mb-stack-lg">
+<span class="material-symbols-outlined text-4xl text-primary mb-stack-sm" style="font-variation-settings: &quot;FILL&quot; 1;">local_cafe</span>
+<h2 class="font-headline-md-mobile md:font-headline-md text-headline-md-mobile md:text-headline-md text-primary mb-stack-sm">KopiKita</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Welcome Back</p>
+</div>
+<!-- Form -->
+<form class="space-y-stack-md" onsubmit="event.preventDefault();">
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-unit" for="email">Email</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">mail</span>
+<input class="w-full pl-10 pr-3 py-3 bg-surface-container-low border-b border-outline focus:border-secondary focus:ring-0 focus:outline-none rounded-t-lg transition-colors font-body-md text-body-md text-on-surface placeholder:text-outline-variant" id="email" placeholder="your@email.com" type="email">
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-unit">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="password">Password</label>
+<a class="font-label-sm text-label-sm text-secondary hover:text-primary transition-colors" href="#">Forgot Password?</a>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">lock</span>
+<input class="w-full pl-10 pr-3 py-3 bg-surface-container-low border-b border-outline focus:border-secondary focus:ring-0 focus:outline-none rounded-t-lg transition-colors font-body-md text-body-md text-on-surface placeholder:text-outline-variant" id="password" placeholder="••••••••" type="password">
+</div>
+</div>
+<div class="flex items-center mt-unit mb-stack-lg">
+<input class="w-4 h-4 rounded text-secondary border-outline focus:ring-secondary focus:ring-offset-background" id="remember" type="checkbox">
+<label class="ml-2 font-label-md text-label-md text-on-surface-variant cursor-pointer" for="remember">Remember me</label>
+</div>
+<button class="w-full py-3 px-4 bg-primary text-on-primary rounded-lg font-title-lg text-title-lg hover:bg-on-primary-fixed-variant active:scale-95 transition-all duration-200 ambient-shadow" type="submit">
+                    Sign In
+                </button>
+</form>
+
+
+</div>
+</div>
+
+
+</body></html>

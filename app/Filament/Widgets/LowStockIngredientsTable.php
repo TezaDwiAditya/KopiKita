@@ -12,7 +12,10 @@ class LowStockIngredientsTable extends TableWidget
 {
     protected static ?string $heading = 'Stock Hampir Habis';
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'default' => 'full',
+        'md' => 1,
+    ];
 
     public function table(Table $table): Table
     {

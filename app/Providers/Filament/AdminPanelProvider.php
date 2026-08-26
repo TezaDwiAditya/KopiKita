@@ -2,15 +2,16 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Widgets\BestSellingProductsTable;
-use App\Filament\Widgets\LowStockIngredientsTable;
-use App\Filament\Widgets\SalesChart;
-use App\Filament\Widgets\SalesStatsOverview;
+use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Reports\CustomerProductSalesReport;
 use App\Filament\Pages\Reports\CustomerStatementReport;
 use App\Filament\Pages\Reports\IngredientUsageReport;
 use App\Filament\Pages\Reports\ProductReport;
 use App\Filament\Pages\Reports\SalesReport;
+use App\Filament\Widgets\BestSellingProductsTable;
+use App\Filament\Widgets\LowStockIngredientsTable;
+use App\Filament\Widgets\SalesChart;
+use App\Filament\Widgets\SalesStatsOverview;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -26,6 +27,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -36,9 +38,27 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(Login::class)
+            ->brandName('KopiKita')
+            ->brandLogo(new HtmlString('
+                <span class="kopikita-brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 32 32" role="img">
+                        <path d="M8 11h15v6.5a7.5 7.5 0 0 1-15 0V11Z" />
+                        <path d="M23 13h2.5a3 3 0 0 1 0 6H23" />
+                        <path d="M11 7c0-1.5 1.4-1.8 1.4-3.2M16 7c0-1.5 1.4-1.8 1.4-3.2M21 7c0-1.5 1.4-1.8 1.4-3.2" />
+                        <path d="M7 25h18" />
+                    </svg>
+                    <span>KopiKita</span>
+                </span>
+            '))
+            ->brandLogoHeight('1.75rem')
+            ->simplePageMaxContentWidth('64rem')
+            ->viteTheme('resources/css/filament/admin/theme.css')
+            ->passwordReset()
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::Green,
+                'warning' => Color::Amber,
+                'gray' => Color::Zinc,
             ])
             ->sidebarFullyCollapsibleOnDesktop()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')

@@ -13,7 +13,10 @@ class BestSellingProductsTable extends TableWidget
 {
     protected static ?string $heading = 'Produk Terlaris Bulan Ini';
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'default' => 'full',
+        'md' => 1,
+    ];
 
     public function table(Table $table): Table
     {
@@ -66,6 +69,7 @@ class BestSellingProductsTable extends TableWidget
                 'transaction_items.variant_display',
                 'transaction_items.total_qty',
                 'transaction_items.total_sales',
-            ]);
+            ])
+            ->limit(10);
     }
 }

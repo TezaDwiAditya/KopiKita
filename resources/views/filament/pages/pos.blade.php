@@ -60,6 +60,13 @@
         .dark .pos-qty button { background: rgb(55 65 81); color: white; }
         .pos-qty span { min-width: 36px; text-align: center; font-weight: 800; color: rgb(17 24 39); }
         .dark .pos-qty span { color: white; }
+        .pos-customs { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 7px; }
+        .pos-custom-btn { border: 1px solid rgb(209 213 219); border-radius: 999px; background: rgb(249 250 251); color: rgb(55 65 81); padding: 7px 10px; font-size: 12px; font-weight: 800; cursor: pointer; }
+        .pos-custom-btn:hover { background: rgb(254 243 199); border-color: rgb(245 158 11 / 40%); color: rgb(120 53 15); }
+        .pos-custom-btn.active { background: rgb(31 77 53); border-color: rgb(31 77 53); color: white; }
+        .dark .pos-custom-btn { background: rgb(31 41 55); border-color: rgb(75 85 99); color: rgb(229 231 235); }
+        .dark .pos-custom-btn:hover { background: rgb(69 26 3); color: rgb(252 211 77); }
+        .dark .pos-custom-btn.active { background: rgb(22 101 52); border-color: rgb(22 101 52); color: white; }
         .pos-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgb(229 231 235); display: grid; gap: 10px; }
         .dark .pos-section { border-color: rgb(55 65 81); }
         .pos-total-row { display: flex; justify-content: space-between; gap: 12px; color: rgb(55 65 81); font-size: 14px; }
@@ -164,7 +171,18 @@
                             </div>
                             <strong>Rp {{ number_format($item['price'] * $item['qty'], 0, ',', '.') }}</strong>
                         </div>
-                        <input type="text" wire:model.blur="cart.{{ $menuId }}.note" placeholder="Catatan item" class="pos-input" style="margin-top: 12px;" />
+                        <div class="pos-customs">
+                            @foreach ($this->itemCustomOptions as $custom)
+                                <button
+                                    type="button"
+                                    wire:click="toggleItemCustom('{{ $menuId }}', '{{ $custom }}')"
+                                    class="pos-custom-btn {{ $this->itemHasCustom($item, $custom) ? 'active' : '' }}"
+                                >
+                                    {{ $custom }}
+                                </button>
+                            @endforeach
+                        </div>
+                        <input type="text" wire:model.blur="cart.{{ $menuId }}.note" placeholder="Custom / catatan item" class="pos-input" style="margin-top: 12px;" />
                     </div>
                 @empty
                     <div class="pos-empty">Klik menu untuk menambahkan ke keranjang.</div>
