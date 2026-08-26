@@ -1,9 +1,24 @@
 # =====================================
-# Stage 1 - Install PHP Dependencies
+# Stage 1 - PHP Dependencies / Composer
 # =====================================
-FROM composer:2 AS vendor
+FROM php:8.4-cli AS vendor
 
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    zip \
+    libicu-dev \
+    libzip-dev \
+    libonig-dev \
+    && docker-php-ext-install \
+        intl \
+        mbstring \
+        zip \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY composer.json composer.lock ./
 
@@ -26,7 +41,7 @@ COPY package*.json ./
 
 RUN npm install --no-audit --no-fund
 
-# Copy vendor supaya Filament CSS tersedia
+# Filament membutuhkan vendor saat Vite build
 COPY --from=vendor /app/vendor ./vendor
 
 COPY resources ./resources
@@ -66,16 +81,16 @@ RUN sed -ri \
     /etc/apache2/sites-available/*.conf \
     /etc/apache2/apache2.conf
 
-COPY composer.json composer.lock ./
-
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Gunakan vendor yang sudah dibuat pada stage vendor
+COPY composer.json composer.lock ./
+
+# Gunakan vendor yang sudah berhasil dibuat
 COPY --from=vendor /app/vendor ./vendor
 
 COPY . .
 
-# Copy hasil Vite build
+# Hasil Vite build
 COPY --from=assets /app/public/build ./public/build
 
 RUN composer dump-autoload --optimize --no-dev
