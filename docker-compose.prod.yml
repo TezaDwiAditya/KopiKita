@@ -1,9 +1,6 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile.fpm
-    image: kopikita-app:${APP_IMAGE_TAG:-latest}
+    image: casatech/kopikita:${APP_IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       APP_NAME: ${APP_NAME:-KopiKita}
