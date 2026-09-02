@@ -7,7 +7,7 @@ if [ "${INSTALL_COMPOSER_DEPS:-false}" = "true" ] && [ ! -f vendor/autoload.php 
     composer install --no-interaction --prefer-dist
 fi
 
-if [ ! -f public/index.php ] && [ -d /usr/src/app-public ]; then
+if [ -d /usr/src/app-public ]; then
     cp -a /usr/src/app-public/. public/
 fi
 
