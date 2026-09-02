@@ -17,7 +17,7 @@ class WhatsAppWebService implements WhatsAppService
         $transaction->loadMissing(['customer', 'items']);
 
         $lines = [
-            '☕ KOPIKITA',
+            'KOPIKITA',
             'Tagihan Pembayaran',
             '',
             "Invoice: {$transaction->invoice_number}",
@@ -32,13 +32,7 @@ class WhatsAppWebService implements WhatsAppService
         $lines[] = 'Pesanan:';
 
         foreach ($transaction->items as $item) {
-            $name = trim(implode(' ', array_filter([$item->menu_name, $item->variant_name ? "({$item->variant_name})" : null])));
-            $lines[] = sprintf(
-                '%s x %s %s',
-                $name ?: 'Item',
-                $item->quantity ?? 0,
-                $this->rupiah->format($item->subtotal),
-            );
+            $lines[] = $this->formatItemLine($item);
         }
 
         $subtotal = (int) ($transaction->items->sum('subtotal') ?: $transaction->subtotal);
@@ -55,7 +49,7 @@ class WhatsAppWebService implements WhatsAppService
                 ? 'Silakan scan QRIS yang kami lampirkan/kirim terpisah untuk melakukan pembayaran.'
                 : 'Silakan melakukan pembayaran melalui QRIS.',
             '',
-            'Terima kasih telah melakukan pemesanan di KopiKita ☕',
+            'Terima kasih telah melakukan pemesanan di KopiKita.',
         ]);
 
         return implode("\n", $lines);
@@ -63,19 +57,42 @@ class WhatsAppWebService implements WhatsAppService
 
     public function generateWhatsAppUrl(Transaction $transaction, bool $includeQrisInstruction = false): string
     {
-        $transaction->loadMissing('customer');
+        return $this->generateUrl($transaction, $this->generateInvoiceMessage($transaction, $includeQrisInstruction));
+    }
 
-        $phone = $this->normalizeIndonesianPhone($transaction->customer?->phone_number);
+    public function generateOrderConfirmationMessage(Transaction $transaction): string
+    {
+        $transaction->loadMissing(['customer', 'items']);
 
-        if ($phone === null) {
-            throw new InvalidArgumentException('Nomor WhatsApp customer belum tersedia.');
+        $lines = [
+            'KOPIKITA',
+            'Konfirmasi Pesanan',
+            '',
+            'Halo '.($transaction->customer?->name ?: 'Customer').', pesanan Anda sudah kami terima.',
+            "Invoice: {$transaction->invoice_number}",
+            'Tanggal: '.$this->formatDate($transaction->transaction_date),
+            '',
+            'Pesanan:',
+        ];
+
+        foreach ($transaction->items as $item) {
+            $lines[] = $this->formatItemLine($item);
         }
 
-        if (! $this->isValidIndonesianPhone($phone)) {
-            throw new InvalidArgumentException('Nomor WhatsApp customer tidak valid.');
-        }
+        $lines = array_merge($lines, [
+            '',
+            'TOTAL '.$this->rupiah->format($transaction->grand_total),
+            '',
+            'Mohon konfirmasi apakah pesanan sudah sesuai.',
+            'Terima kasih.',
+        ]);
 
-        return 'https://wa.me/'.$phone.'?text='.rawurlencode($this->generateInvoiceMessage($transaction, $includeQrisInstruction));
+        return implode("\n", $lines);
+    }
+
+    public function generateOrderConfirmationUrl(Transaction $transaction): string
+    {
+        return $this->generateUrl($transaction, $this->generateOrderConfirmationMessage($transaction));
     }
 
     public function normalizeIndonesianPhone(?string $phone): ?string
@@ -105,6 +122,35 @@ class WhatsAppWebService implements WhatsAppService
         }
 
         return $phone;
+    }
+
+    private function generateUrl(Transaction $transaction, string $message): string
+    {
+        $transaction->loadMissing('customer');
+
+        $phone = $this->normalizeIndonesianPhone($transaction->customer?->phone_number);
+
+        if ($phone === null) {
+            throw new InvalidArgumentException('Nomor WhatsApp customer belum tersedia.');
+        }
+
+        if (! $this->isValidIndonesianPhone($phone)) {
+            throw new InvalidArgumentException('Nomor WhatsApp customer tidak valid.');
+        }
+
+        return 'https://wa.me/'.$phone.'?text='.rawurlencode($message);
+    }
+
+    private function formatItemLine(mixed $item): string
+    {
+        $name = trim(implode(' ', array_filter([$item->menu_name, $item->variant_name ? "({$item->variant_name})" : null])));
+
+        return sprintf(
+            '%s x %s %s',
+            $name ?: 'Item',
+            $item->quantity ?? 0,
+            $this->rupiah->format($item->subtotal),
+        );
     }
 
     private function isValidIndonesianPhone(string $phone): bool

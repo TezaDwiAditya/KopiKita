@@ -25,12 +25,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build & Push Production FPM Image
+      - name: Build & Push Production Apache Image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.fpm
+          file: ./Dockerfile
           push: true
           tags: |
+            casatech/kopikita:apache
             casatech/kopikita:latest
-            casatech/kopikita:fpm

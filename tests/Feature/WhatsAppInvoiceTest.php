@@ -36,6 +36,19 @@ class WhatsAppInvoiceTest extends TestCase
         $this->assertStringContainsString(rawurlencode($transaction->invoice_number), $url);
     }
 
+    public function test_generates_order_confirmation_url_for_saved_order(): void
+    {
+        $transaction = $this->createTransactionWithCustomer();
+
+        $url = app(WhatsAppService::class)->generateOrderConfirmationUrl($transaction);
+        $message = urldecode((string) parse_url($url, PHP_URL_QUERY));
+
+        $this->assertStringStartsWith('https://wa.me/6281234567890?text=', $url);
+        $this->assertStringContainsString('Konfirmasi Pesanan', $message);
+        $this->assertStringContainsString('Halo Test Customer, pesanan Anda sudah kami terima.', $message);
+        $this->assertStringContainsString('Mohon konfirmasi apakah pesanan sudah sesuai.', $message);
+    }
+
     public function test_generates_invoice_message_from_database_values(): void
     {
         $transaction = $this->createTransactionWithCustomer();

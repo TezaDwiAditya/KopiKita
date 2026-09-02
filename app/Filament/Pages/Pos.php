@@ -10,6 +10,7 @@ use App\Models\MenuVariant;
 use App\Models\Setting;
 use App\Models\Transaction;
 use App\Services\TransactionService;
+use App\Services\WhatsAppService;
 use BackedEnum;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -17,6 +18,8 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Js;
+use InvalidArgumentException;
 use Throwable;
 use UnitEnum;
 
@@ -307,6 +310,8 @@ class Pos extends Page
             ->body($invoiceNumber)
             ->success()
             ->send();
+
+        $this->openOrderConfirmationWhatsApp($transaction);
     }
 
     public function pay(): void
@@ -398,6 +403,21 @@ class Pos extends Page
 
             return $transaction;
         });
+    }
+
+    private function openOrderConfirmationWhatsApp(Transaction $transaction): void
+    {
+        try {
+            $url = app(WhatsAppService::class)->generateOrderConfirmationUrl($transaction);
+
+            $this->js('window.open('.Js::from($url).', "_blank", "noopener,noreferrer")');
+        } catch (InvalidArgumentException $exception) {
+            Notification::make()
+                ->title('Konfirmasi WhatsApp tidak dibuka')
+                ->body($exception->getMessage())
+                ->warning()
+                ->send();
+        }
     }
 
     private function generateInvoiceNumber(): string
