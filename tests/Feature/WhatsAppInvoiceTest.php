@@ -120,7 +120,7 @@ class WhatsAppInvoiceTest extends TestCase
             'qris_status' => 'pending',
         ]);
 
-        $this->assertSame('images/QRIS_KopitKita.jpeg', app(QrisService::class)->imagePath($transaction));
+        $this->assertSame('images/qris_kopikita.jpeg', app(QrisService::class)->imagePath($transaction));
     }
 
     private function createTransactionWithCustomer(): Transaction

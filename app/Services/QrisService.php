@@ -6,7 +6,7 @@ use App\Models\Transaction;
 
 class QrisService
 {
-    private const DEFAULT_QRIS_IMAGE = 'images/QRIS_KopitKita.jpeg';
+    private const DEFAULT_QRIS_IMAGE = 'images/qris_kopikita.jpeg';
 
     public function imagePath(Transaction $transaction): ?string
     {
