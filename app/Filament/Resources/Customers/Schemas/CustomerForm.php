@@ -2,8 +2,8 @@
 
 namespace App\Filament\Resources\Customers\Schemas;
 
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -23,7 +23,8 @@ class CustomerForm
                         TextInput::make('phone_number')
                             ->label('No HP')
                             ->tel()
-                            ->maxLength(30),
+                            ->maxLength(30)
+                            ->regex('/^(?:\+?62|0|8)[0-9\s().-]{8,16}$/'),
                         Textarea::make('note')
                             ->label('Catatan')
                             ->rows(4)

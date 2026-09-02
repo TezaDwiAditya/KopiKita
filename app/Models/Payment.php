@@ -17,6 +17,10 @@ class Payment extends Model
         'change_amount',
         'paid_at',
         'status',
+        'qris_image',
+        'qris_reference',
+        'qris_amount',
+        'qris_status',
     ];
 
     protected function casts(): array
@@ -24,6 +28,7 @@ class Payment extends Model
         return [
             'amount_paid' => 'integer',
             'change_amount' => 'integer',
+            'qris_amount' => 'integer',
             'paid_at' => 'datetime',
         ];
     }

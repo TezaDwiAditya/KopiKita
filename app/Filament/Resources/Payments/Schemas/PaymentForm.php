@@ -55,6 +55,22 @@ class PaymentForm
                             ])
                             ->default('pending')
                             ->required(),
+                        TextInput::make('qris_reference')
+                            ->label('Referensi QRIS')
+                            ->maxLength(255),
+                        MoneyInput::make('qris_amount')
+                            ->label('Nominal QRIS')
+                            ->minValue(0),
+                        Select::make('qris_status')
+                            ->label('Status QRIS')
+                            ->options([
+                                'pending' => 'Pending',
+                                'paid' => 'Paid',
+                                'expired' => 'Expired',
+                                'cancelled' => 'Cancelled',
+                            ])
+                            ->default('pending')
+                            ->required(),
                     ]),
             ]);
     }

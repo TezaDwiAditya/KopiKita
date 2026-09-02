@@ -24,6 +24,8 @@ use App\Policies\RecipeItemPolicy;
 use App\Policies\RecipePolicy;
 use App\Policies\SettingPolicy;
 use App\Policies\TransactionPolicy;
+use App\Services\WhatsAppService;
+use App\Services\WhatsAppWebService;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -34,7 +36,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(WhatsAppService::class, WhatsAppWebService::class);
     }
 
     /**

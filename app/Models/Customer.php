@@ -16,6 +16,29 @@ class Customer extends Model
         'note',
     ];
 
+    public function setPhoneNumberAttribute(?string $value): void
+    {
+        $phone = trim((string) $value);
+
+        if ($phone === '') {
+            $this->attributes['phone_number'] = null;
+
+            return;
+        }
+
+        $phone = preg_replace('/[^\d+]/', '', $phone) ?: '';
+
+        if (str_starts_with($phone, '+62')) {
+            $phone = '62'.substr($phone, 3);
+        } elseif (str_starts_with($phone, '0')) {
+            $phone = '62'.substr($phone, 1);
+        } elseif (str_starts_with($phone, '8')) {
+            $phone = '62'.$phone;
+        }
+
+        $this->attributes['phone_number'] = $phone;
+    }
+
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
