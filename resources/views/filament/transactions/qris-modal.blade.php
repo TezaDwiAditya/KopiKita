@@ -2,7 +2,7 @@
     use Illuminate\Support\Js;
 
     $qris = app(\App\Services\QrisService::class);
-    $qrisUrl = $qris->imageUrl($transaction);
+    $qrisUrl = $qris->exists($transaction) ? route('admin.transactions.qris', $transaction) : null;
 @endphp
 
 <div class="space-y-4">
