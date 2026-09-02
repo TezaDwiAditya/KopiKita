@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Services\QrisService;
 use App\Services\WhatsAppService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class WhatsAppInvoiceTest extends TestCase
@@ -99,9 +98,6 @@ class WhatsAppInvoiceTest extends TestCase
 
     public function test_authenticated_admin_can_view_private_default_qris(): void
     {
-        Storage::fake('local');
-        Storage::disk('local')->put('QRIS_KopitKita.jpeg', 'fake-qris-image');
-
         $transaction = $this->createTransactionWithCustomer();
 
         $this->actingAs(User::factory()->create())
@@ -111,10 +107,6 @@ class WhatsAppInvoiceTest extends TestCase
 
     public function test_qris_service_only_uses_private_default_qris_image(): void
     {
-        Storage::fake('local');
-        Storage::disk('local')->put('QRIS_KopitKita.jpeg', 'default-qris-image');
-        Storage::disk('local')->put('qris/transaction-specific.jpeg', 'other-qris-image');
-
         $transaction = $this->createTransactionWithCustomer();
         $transaction->payment()->create([
             'method' => 'qris',
@@ -128,7 +120,7 @@ class WhatsAppInvoiceTest extends TestCase
             'qris_status' => 'pending',
         ]);
 
-        $this->assertSame('QRIS_KopitKita.jpeg', app(QrisService::class)->imagePath($transaction));
+        $this->assertSame('images/QRIS_KopitKita.jpeg', app(QrisService::class)->imagePath($transaction));
     }
 
     private function createTransactionWithCustomer(): Transaction

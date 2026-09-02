@@ -6,7 +6,7 @@
 
 @if ($transaction && $qris->exists($transaction))
     <img
-        src="{{ route('admin.transactions.qris', $transaction) }}"
+        src="{{ $qris->imageUrl($transaction) }}"
         alt="QRIS {{ $transaction->invoice_number }}"
         class="max-h-60 w-auto rounded-md border border-gray-200 bg-white p-2 dark:border-gray-700"
     >

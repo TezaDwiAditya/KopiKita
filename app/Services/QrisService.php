@@ -3,19 +3,25 @@
 namespace App\Services;
 
 use App\Models\Transaction;
-use Illuminate\Support\Facades\Storage;
 
 class QrisService
 {
-    private const DEFAULT_QRIS_IMAGE = 'QRIS_KopitKita.jpeg';
+    private const DEFAULT_QRIS_IMAGE = 'images/QRIS_KopitKita.jpeg';
 
     public function imagePath(Transaction $transaction): ?string
     {
-        if (Storage::disk('local')->exists(self::DEFAULT_QRIS_IMAGE)) {
+        if (is_file(public_path(self::DEFAULT_QRIS_IMAGE))) {
             return self::DEFAULT_QRIS_IMAGE;
         }
 
         return null;
+    }
+
+    public function imageUrl(Transaction $transaction): ?string
+    {
+        $path = $this->imagePath($transaction);
+
+        return $path ? asset($path) : null;
     }
 
     public function exists(Transaction $transaction): bool

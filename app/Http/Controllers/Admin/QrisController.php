@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Transaction;
 use App\Services\QrisService;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class QrisController extends Controller
@@ -17,7 +16,7 @@ class QrisController extends Controller
 
         abort_if($path === null, 404);
 
-        return response()->file(Storage::disk('local')->path($path));
+        return response()->file(public_path($path));
     }
 
     public function download(Transaction $transaction, QrisService $qris): BinaryFileResponse
@@ -27,7 +26,7 @@ class QrisController extends Controller
         abort_if($path === null, 404);
 
         return response()->download(
-            Storage::disk('local')->path($path),
+            public_path($path),
             'qris-'.$transaction->invoice_number.'.'.pathinfo($path, PATHINFO_EXTENSION),
         );
     }
