@@ -38,6 +38,44 @@ class TransactionItem extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function (TransactionItem $item): void {
+            $shouldSyncMenu = ! $item->exists || $item->isDirty('menu_id') || $item->isDirty('menu_variant_id');
+            $shouldSyncPrice = $shouldSyncMenu || (int) $item->price <= 0;
+
+            if ($item->menu_variant_id && ($shouldSyncMenu || $shouldSyncPrice)) {
+                $variant = MenuVariant::query()
+                    ->with('menu')
+                    ->find($item->menu_variant_id);
+
+                if ($variant) {
+                    $item->menu_id = $variant->menu_id;
+                    $item->menu_name = $variant->menu->name;
+                    $item->variant_name = $variant->name;
+
+                    if ($shouldSyncPrice) {
+                        $item->price = $variant->selling_price;
+                    }
+                }
+            } elseif ($item->menu_id && ($shouldSyncMenu || $shouldSyncPrice)) {
+                $menu = Menu::query()->find($item->menu_id);
+
+                if ($menu) {
+                    $item->menu_name = $menu->name;
+                    $item->variant_name = null;
+
+                    if ($shouldSyncPrice) {
+                        $item->price = $menu->selling_price;
+                    }
+                }
+            }
+
+            $item->quantity = max(1, (int) $item->quantity);
+            $item->subtotal = $item->quantity * (int) $item->price;
+        });
+    }
+
     public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class);

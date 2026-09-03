@@ -146,9 +146,10 @@ class WhatsAppWebService implements WhatsAppService
         $name = trim(implode(' ', array_filter([$item->menu_name, $item->variant_name ? "({$item->variant_name})" : null])));
 
         return sprintf(
-            '%s x %s %s',
+            '%s x %s @ %s = %s',
             $name ?: 'Item',
             $item->quantity ?? 0,
+            $this->rupiah->format($item->price),
             $this->rupiah->format($item->subtotal),
         );
     }

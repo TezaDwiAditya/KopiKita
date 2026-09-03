@@ -10,6 +10,10 @@ class SalesChart extends ChartWidget
 {
     protected ?string $heading = 'Grafik Penjualan 14 Hari Terakhir';
 
+    protected int|string|array $columnSpan = 'full';
+
+    protected ?string $maxHeight = '320px';
+
     protected ?string $pollingInterval = '60s';
 
     protected function getData(): array

@@ -20,6 +20,12 @@ class ViewTransaction extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('add_order')
+                ->label('Tambah Pesanan')
+                ->icon('heroicon-o-plus-circle')
+                ->color('primary')
+                ->visible(fn (Transaction $record): bool => $record->status === 'draft')
+                ->url(fn (Transaction $record): string => TransactionResource::getUrl('add-order', ['record' => $record])),
             Action::make('send_invoice_whatsapp_missing_phone')
                 ->label('💬 Kirim Tagihan WA')
                 ->icon('heroicon-o-chat-bubble-left-right')

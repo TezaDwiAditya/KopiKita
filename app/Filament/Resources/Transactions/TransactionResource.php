@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Transactions;
 
+use App\Filament\Resources\Transactions\Pages\AddOrderTransaction;
 use App\Filament\Resources\Transactions\Pages\CreateTransaction;
 use App\Filament\Resources\Transactions\Pages\EditTransaction;
 use App\Filament\Resources\Transactions\Pages\ListTransactions;
@@ -62,6 +63,7 @@ class TransactionResource extends Resource
         return [
             'index' => ListTransactions::route('/'),
             'create' => CreateTransaction::route('/create'),
+            'add-order' => AddOrderTransaction::route('/{record}/add-order'),
             'view' => ViewTransaction::route('/{record}'),
             'edit' => EditTransaction::route('/{record}/edit'),
         ];

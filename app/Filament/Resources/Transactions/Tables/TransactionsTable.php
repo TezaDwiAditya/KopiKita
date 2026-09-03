@@ -3,16 +3,17 @@
 namespace App\Filament\Resources\Transactions\Tables;
 
 use App\Filament\Forms\Components\MoneyInput;
+use App\Filament\Resources\Transactions\TransactionResource;
 use App\Models\Transaction;
 use App\Services\TransactionService;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -39,7 +40,9 @@ class TransactionsTable
                 TextColumn::make('discount')->label('Diskon')->formatStateUsing(fn (int $state): string => 'Rp '.number_format($state, 0, ',', '.'))->sortable()->toggleable(),
                 TextColumn::make('tax')->label('Pajak')->formatStateUsing(fn (int $state): string => 'Rp '.number_format($state, 0, ',', '.'))->sortable()->toggleable(),
                 TextColumn::make('grand_total')->label('Grand Total')->formatStateUsing(fn (int $state): string => 'Rp '.number_format($state, 0, ',', '.'))->sortable()->weight('bold'),
-                TextColumn::make('status')->label('Status')->badge()->color(fn (string $state): string => match ($state) { 'paid' => 'success', 'void' => 'danger', default => 'warning' }),
+                TextColumn::make('status')->label('Status')->badge()->color(fn (string $state): string => match ($state) {
+                    'paid' => 'success', 'void' => 'danger', default => 'warning'
+                }),
                 TextColumn::make('created_at')->label('Dibuat')->dateTime('d M Y H:i')->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
@@ -64,88 +67,106 @@ class TransactionsTable
                 Filter::make('today')->label('Hari Ini')->query(fn (Builder $query): Builder => $query->whereDate('transaction_date', today())),
             ])
             ->recordActions([
-                Action::make('pay')
-                    ->label('Bayar')
-                    ->icon('heroicon-o-banknotes')
-                    ->color('success')
-                    ->visible(fn (Transaction $record): bool => $record->status === 'draft')
-                    ->modalSubmitActionLabel('Bayar')
-                    ->form(fn (Transaction $record): array => [
-                        Select::make('method')
-                            ->label('Metode Pembayaran')
-                            ->options([
-                                'cash' => 'Cash',
-                                'qris' => 'QRIS',
-                                'transfer' => 'Transfer',
-                                'debit' => 'Debit',
+                ActionGroup::make([
+                    ActionGroup::make([
+                        Action::make('add_order')
+                            ->label('Tambah Pesanan')
+                            ->icon('heroicon-o-plus-circle')
+                            ->color('primary')
+                            ->visible(fn (Transaction $record): bool => $record->status === 'draft')
+                            ->url(fn (Transaction $record): string => TransactionResource::getUrl('add-order', ['record' => $record])),
+                        Action::make('pay')
+                            ->label('Bayar')
+                            ->icon('heroicon-o-banknotes')
+                            ->color('success')
+                            ->visible(fn (Transaction $record): bool => $record->status === 'draft')
+                            ->modalSubmitActionLabel('Bayar')
+                            ->form(fn (Transaction $record): array => [
+                                Select::make('method')
+                                    ->label('Metode Pembayaran')
+                                    ->options([
+                                        'cash' => 'Cash',
+                                        'qris' => 'QRIS',
+                                        'transfer' => 'Transfer',
+                                        'debit' => 'Debit',
+                                    ])
+                                    ->default('cash')
+                                    ->live()
+                                    ->afterStateUpdated(function (?string $state, callable $set) use ($record): void {
+                                        if ($state !== 'cash') {
+                                            $set('amount_paid', $record->grand_total);
+                                        }
+                                    })
+                                    ->required(),
+                                MoneyInput::make('amount_paid')
+                                    ->label('Uang Bayar')
+                                    ->required()
+                                    ->minValue(0),
                             ])
-                            ->default('cash')
-                            ->live()
-                            ->afterStateUpdated(function (?string $state, callable $set) use ($record): void {
-                                if ($state !== 'cash') {
-                                    $set('amount_paid', $record->grand_total);
+                            ->action(function (Transaction $record, array $data): void {
+                                try {
+                                    app(TransactionService::class)->pay($record, $data['method'], (int) $data['amount_paid']);
+
+                                    Notification::make()
+                                        ->title('Transaksi berhasil dibayar')
+                                        ->success()
+                                        ->send();
+                                } catch (RuntimeException $exception) {
+                                    Notification::make()
+                                        ->title('Pembayaran gagal')
+                                        ->body($exception->getMessage())
+                                        ->danger()
+                                        ->send();
                                 }
-                            })
-                            ->required(),
-                        MoneyInput::make('amount_paid')
-                            ->label('Uang Bayar')
-                            ->required()
-                            ->minValue(0),
-                    ])
-                    ->action(function (Transaction $record, array $data): void {
-                        try {
-                            app(TransactionService::class)->pay($record, $data['method'], (int) $data['amount_paid']);
+                            }),
+                    ])->dropdown(false),
+                    ActionGroup::make([
+                        Action::make('print_receipt')
+                            ->label('Print Struk')
+                            ->icon('heroicon-o-printer')
+                            ->color('gray')
+                            ->url(fn (Transaction $record): string => route('admin.transactions.receipt', $record))
+                            ->openUrlInNewTab(),
+                        Action::make('print_order')
+                            ->label('Print Pesanan')
+                            ->icon('heroicon-o-document-text')
+                            ->color('gray')
+                            ->url(fn (Transaction $record): string => route('admin.transactions.order-print', $record))
+                            ->openUrlInNewTab(),
+                    ])->dropdown(false),
+                    ActionGroup::make([
+                        ViewAction::make(),
+                        EditAction::make(),
+                        Action::make('void')
+                            ->label('Void')
+                            ->icon('heroicon-o-no-symbol')
+                            ->color('danger')
+                            ->visible(fn (Transaction $record): bool => $record->status !== 'void')
+                            ->requiresConfirmation()
+                            ->modalHeading('Void transaksi')
+                            ->modalDescription('Transaksi akan dibatalkan. Jika sudah dibayar, stock bahan akan dikembalikan.')
+                            ->action(function (Transaction $record): void {
+                                try {
+                                    app(TransactionService::class)->void($record);
 
-                            Notification::make()
-                                ->title('Transaksi berhasil dibayar')
-                                ->success()
-                                ->send();
-                        } catch (RuntimeException $exception) {
-                            Notification::make()
-                                ->title('Pembayaran gagal')
-                                ->body($exception->getMessage())
-                                ->danger()
-                                ->send();
-                        }
-                    }),
-                Action::make('print_receipt')
-                    ->label('Print Struk')
-                    ->icon('heroicon-o-printer')
+                                    Notification::make()
+                                        ->title('Transaksi berhasil di-void')
+                                        ->success()
+                                        ->send();
+                                } catch (Throwable $exception) {
+                                    Notification::make()
+                                        ->title('Void gagal')
+                                        ->body($exception->getMessage())
+                                        ->danger()
+                                        ->send();
+                                }
+                            }),
+                    ])->dropdown(false),
+                ])
+                    ->label('Aksi')
+                    ->icon('heroicon-m-ellipsis-vertical')
                     ->color('gray')
-                    ->url(fn (Transaction $record): string => route('admin.transactions.receipt', $record))
-                    ->openUrlInNewTab(),
-                Action::make('print_order')
-                    ->label('Print Pesanan')
-                    ->icon('heroicon-o-document-text')
-                    ->color('gray')
-                    ->url(fn (Transaction $record): string => route('admin.transactions.order-print', $record))
-                    ->openUrlInNewTab(),
-                Action::make('void')
-                    ->label('Void')
-                    ->icon('heroicon-o-no-symbol')
-                    ->color('danger')
-                    ->visible(fn (Transaction $record): bool => $record->status !== 'void')
-                    ->requiresConfirmation()
-                    ->modalHeading('Void transaksi')
-                    ->modalDescription('Transaksi akan dibatalkan. Jika sudah dibayar, stock bahan akan dikembalikan.')
-                    ->action(function (Transaction $record): void {
-                        try {
-                            app(TransactionService::class)->void($record);
-
-                            Notification::make()
-                                ->title('Transaksi berhasil di-void')
-                                ->success()
-                                ->send();
-                        } catch (Throwable $exception) {
-                            Notification::make()
-                                ->title('Void gagal')
-                                ->body($exception->getMessage())
-                                ->danger()
-                                ->send();
-                        }
-                    }),
-                ViewAction::make(),
-                EditAction::make(),
+                    ->button(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

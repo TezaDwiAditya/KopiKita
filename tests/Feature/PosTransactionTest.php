@@ -3,10 +3,13 @@
 namespace Tests\Feature;
 
 use App\Filament\Pages\Pos;
+use App\Filament\Resources\Transactions\Pages\AddOrderTransaction;
+use App\Filament\Resources\Transactions\TransactionResource;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Ingredient;
 use App\Models\Menu;
+use App\Models\MenuVariant;
 use App\Models\Recipe;
 use App\Models\Setting;
 use App\Models\Transaction;
@@ -122,6 +125,91 @@ class PosTransactionTest extends TestCase
             ->assertSet('customerId', null)
             ->assertSet('customerSearch', '')
             ->assertSet('cart', []);
+    }
+
+    public function test_transaction_item_uses_selected_variant_and_recalculates_totals(): void
+    {
+        $user = User::factory()->create();
+        $menu = $this->createMenu();
+        $variant = MenuVariant::query()->create([
+            'menu_id' => $menu->id,
+            'name' => 'Large',
+            'selling_price' => 22000,
+            'cost_price' => 8000,
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+
+        Setting::query()->updateOrCreate(
+            ['id' => 1],
+            [
+                'store_name' => 'Coffee Kita Test',
+                'tax_percentage' => 10,
+            ],
+        );
+
+        $this->actingAs($user);
+
+        $transaction = Transaction::query()->create([
+            'transaction_date' => now(),
+            'cashier_id' => $user->id,
+            'discount' => 4000,
+            'status' => 'draft',
+        ]);
+
+        $transaction->items()->create([
+            'menu_id' => $menu->id,
+            'menu_variant_id' => $variant->id,
+            'quantity' => 2,
+            'price' => 0,
+            'subtotal' => 0,
+        ]);
+
+        $transaction->recalculateTotals();
+        $transaction->refresh();
+
+        $item = $transaction->items()->first();
+
+        $this->assertNotNull($transaction->invoice_number);
+        $this->assertSame($menu->name, $item->menu_name);
+        $this->assertSame('Large', $item->variant_name);
+        $this->assertSame(22000, $item->price);
+        $this->assertSame(44000, $item->subtotal);
+        $this->assertSame(44000, $transaction->subtotal);
+        $this->assertSame(4000, $transaction->tax);
+        $this->assertSame(44000, $transaction->grand_total);
+    }
+
+    public function test_add_order_page_adds_pos_cart_items_to_draft_transaction(): void
+    {
+        $user = User::factory()->create();
+        $transaction = $this->createDraftTransaction($user);
+        $menu = $this->createMenu();
+
+        Setting::query()->updateOrCreate(
+            ['id' => 1],
+            [
+                'store_name' => 'Coffee Kita Test',
+                'tax_percentage' => 10,
+            ],
+        );
+
+        $this->actingAs($user);
+
+        Livewire::test(AddOrderTransaction::class, ['record' => $transaction->getRouteKey()])
+            ->call('addToCart', $menu->id)
+            ->call('incrementQty', (string) $menu->id)
+            ->set('discount', 5000)
+            ->call('saveOrder')
+            ->assertRedirect(TransactionResource::getUrl('view', ['record' => $transaction]));
+
+        $transaction->refresh();
+
+        $this->assertSame(2, $transaction->items()->count());
+        $this->assertSame(60000, $transaction->subtotal);
+        $this->assertSame(5000, $transaction->discount);
+        $this->assertSame(5500, $transaction->tax);
+        $this->assertSame(60500, $transaction->grand_total);
     }
 
     public function test_order_print_route_can_render_printable_order_sheet(): void

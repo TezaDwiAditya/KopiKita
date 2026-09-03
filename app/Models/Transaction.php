@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Carbon;
 
 class Transaction extends Model
 {
@@ -37,6 +38,29 @@ class Transaction extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function (Transaction $transaction): void {
+            $transaction->transaction_date ??= now();
+            $transaction->cashier_id ??= auth()->id();
+            $transaction->invoice_number ??= static::generateInvoiceNumber($transaction->transaction_date);
+        });
+    }
+
+    public static function generateInvoiceNumber(mixed $transactionDate = null): string
+    {
+        $invoiceDate = $transactionDate ? Carbon::parse($transactionDate) : now();
+        $prefix = 'INV-'.$invoiceDate->format('Ymd').'-';
+        $lastInvoice = static::query()
+            ->where('invoice_number', 'like', $prefix.'%')
+            ->orderByDesc('invoice_number')
+            ->value('invoice_number');
+
+        $nextNumber = $lastInvoice ? ((int) substr($lastInvoice, -5)) + 1 : 1;
+
+        return $prefix.str_pad((string) $nextNumber, 5, '0', STR_PAD_LEFT);
+    }
+
     public function cashier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cashier_id');
@@ -60,5 +84,20 @@ class Transaction extends Model
     public function stockMovements(): MorphMany
     {
         return $this->morphMany(IngredientStock::class, 'reference');
+    }
+
+    public function recalculateTotals(): void
+    {
+        $subtotal = (int) $this->items()->sum('subtotal');
+        $discount = max(0, (int) $this->discount);
+        $taxPercentage = Setting::query()->value('tax_percentage') ?? 0;
+        $tax = (int) round(max(0, $subtotal - $discount) * $taxPercentage / 100);
+
+        $this->forceFill([
+            'subtotal' => $subtotal,
+            'discount' => $discount,
+            'tax' => $tax,
+            'grand_total' => max(0, $subtotal - $discount + $tax),
+        ])->save();
     }
 }

@@ -45,6 +45,7 @@ class WhatsAppInvoiceTest extends TestCase
         $this->assertStringStartsWith('https://wa.me/6281234567890?text=', $url);
         $this->assertStringContainsString('Konfirmasi Pesanan', $message);
         $this->assertStringContainsString('Halo Test Customer, pesanan Anda sudah kami terima.', $message);
+        $this->assertStringContainsString('KSK x 2 @ Rp15.000 = Rp30.000', $message);
         $this->assertStringContainsString('Mohon konfirmasi apakah pesanan sudah sesuai.', $message);
     }
 
@@ -57,8 +58,8 @@ class WhatsAppInvoiceTest extends TestCase
         $this->assertStringContainsString('Invoice: '.$transaction->invoice_number, $message);
         $this->assertStringContainsString('Tanggal: 02 September 2026', $message);
         $this->assertStringContainsString('Customer: Test Customer', $message);
-        $this->assertStringContainsString('KSK x 2 Rp30.000', $message);
-        $this->assertStringContainsString('Americano x 1 Rp15.000', $message);
+        $this->assertStringContainsString('KSK x 2 @ Rp15.000 = Rp30.000', $message);
+        $this->assertStringContainsString('Americano x 1 @ Rp15.000 = Rp15.000', $message);
         $this->assertStringContainsString('Subtotal Rp45.000', $message);
         $this->assertStringContainsString('Diskon Rp0', $message);
         $this->assertStringContainsString('TOTAL Rp45.000', $message);
@@ -147,6 +148,16 @@ class WhatsAppInvoiceTest extends TestCase
             'photo_path' => null,
         ]);
 
+        $americano = Menu::query()->create([
+            'category_id' => $category->id,
+            'name' => 'Americano',
+            'slug' => 'americano-'.uniqid(),
+            'selling_price' => 15000,
+            'cost_price' => 5000,
+            'is_active' => true,
+            'photo_path' => null,
+        ]);
+
         $transaction = Transaction::query()->create([
             'invoice_number' => 'INV-20260902-0001-'.uniqid(),
             'transaction_date' => '2026-09-02 10:00:00',
@@ -170,7 +181,7 @@ class WhatsAppInvoiceTest extends TestCase
                 'note' => null,
             ],
             [
-                'menu_id' => $menu->id,
+                'menu_id' => $americano->id,
                 'menu_name' => 'Americano',
                 'quantity' => 1,
                 'price' => 15000,
