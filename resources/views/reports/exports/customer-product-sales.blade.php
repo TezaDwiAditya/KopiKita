@@ -45,8 +45,9 @@
     </div>
     <div class="head-right">
         <div class="summary-row"><span class="summary-label">Diterima:</span><span class="summary-amount">{{ $money($summary['paid']) }}</span></div>
-        <div class="summary-row"><span class="summary-label">Belum Dibayar:</span><span class="summary-amount">{{ $money($summary['unpaid']) }}</span></div>
-        <div class="summary-row"><span class="summary-label">Total Penjualan:</span><span class="summary-amount">{{ $money($summary['sales']) }}</span></div>
+        <div class="summary-row"><span class="summary-label">Total Sebelum Diskon:</span><span class="summary-amount">{{ $money($summary['gross_sales']) }}</span></div>
+        <div class="summary-row"><span class="summary-label">Total Diskon:</span><span class="summary-amount">{{ $money($summary['discount']) }}</span></div>
+        <div class="summary-row"><span class="summary-label">Total Tagihan:</span><span class="summary-amount">{{ $money($summary['sales']) }}</span></div>
     </div>
 </div>
 
@@ -62,8 +63,10 @@
             <th>Nama Pihak</th>
             <th>Tanggal Faktur</th>
             <th>Produk</th>
-            <th class="right">Jumlah</th>
+            <th class="right">Qty</th>
             <th class="right">Harga Jual</th>
+            <th class="right">Jumlah</th>
+            <th class="right">Diskon</th>
             <th class="right">Jumlah Total</th>
             <th class="right">Diterima</th>
             <th class="right">Saldo</th>
@@ -90,12 +93,18 @@
                         <div class="item-line">{{ $money($item['price']) }}</div>
                     @endforeach
                 </td>
+                <td class="right">
+                    @foreach ($row['items'] as $item)
+                        <div class="item-line">{{ $money($item['subtotal']) }}</div>
+                    @endforeach
+                </td>
+                <td class="right">{{ $money($row['discount']) }}</td>
                 <td class="right">{{ $money($row['amount']) }}</td>
                 <td class="right">{{ $money($row['paid']) }}</td>
                 <td class="right">{{ $money($row['balance']) }}</td>
             </tr>
         @empty
-            <tr><td colspan="9">Tidak ada data penjualan customer untuk periode ini.</td></tr>
+            <tr><td colspan="10">Tidak ada data penjualan customer untuk periode ini.</td></tr>
         @endforelse
     </tbody>
 </table>

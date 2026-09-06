@@ -3,7 +3,9 @@
 namespace App\Filament\Resources\Menus\Tables;
 
 use App\Filament\Forms\Components\MoneyInput;
+use App\Models\CustomerGroup;
 use App\Models\MenuVariant;
+use App\Models\MenuVariantGroupPrice;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -11,6 +13,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
@@ -145,6 +148,98 @@ class MenusTable
                             ->success()
                             ->send();
                     }),
+                Action::make('group_prices')
+                    ->label('Harga Group')
+                    ->icon('heroicon-o-tag')
+                    ->color('success')
+                    ->modalHeading(fn ($record): string => 'Harga Group '.$record->name)
+                    ->fillForm(function ($record): array {
+                        $groupId = CustomerGroup::query()
+                            ->where('is_active', true)
+                            ->orderBy('name')
+                            ->value('id');
+
+                        return [
+                            'customer_group_id' => $groupId,
+                            'variants' => self::groupPriceRows($record, $groupId ? (int) $groupId : null),
+                        ];
+                    })
+                    ->form(fn ($record): array => [
+                        Select::make('customer_group_id')
+                            ->label('Group Customer')
+                            ->options(fn (): array => CustomerGroup::query()
+                                ->where('is_active', true)
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all())
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->required()
+                            ->afterStateUpdated(fn ($state, callable $set): mixed => $set('variants', self::groupPriceRows($record, $state ? (int) $state : null))),
+                        Repeater::make('variants')
+                            ->label('Harga Per Varian')
+                            ->schema([
+                                Hidden::make('id'),
+                                TextInput::make('name')
+                                    ->label('Varian')
+                                    ->disabled()
+                                    ->dehydrated(),
+                                MoneyInput::make('default_price')
+                                    ->label('Harga Normal')
+                                    ->disabled()
+                                    ->dehydrated(false),
+                                MoneyInput::make('group_price')
+                                    ->label('Harga Group')
+                                    ->minValue(0),
+                            ])
+                            ->columns(4)
+                            ->addable(false)
+                            ->deletable(false)
+                            ->reorderable(false)
+                            ->columnSpanFull(),
+                    ])
+                    ->action(function ($record, array $data): void {
+                        $groupId = (int) ($data['customer_group_id'] ?? 0);
+
+                        if (! $groupId) {
+                            return;
+                        }
+
+                        foreach (($data['variants'] ?? []) as $variantData) {
+                            $variant = MenuVariant::query()
+                                ->where('menu_id', $record->id)
+                                ->find($variantData['id'] ?? null);
+
+                            if (! $variant) {
+                                continue;
+                            }
+
+                            $price = (int) preg_replace('/\D/', '', (string) ($variantData['group_price'] ?? 0));
+
+                            if ($price <= 0) {
+                                MenuVariantGroupPrice::query()
+                                    ->where('menu_variant_id', $variant->id)
+                                    ->where('customer_group_id', $groupId)
+                                    ->delete();
+
+                                continue;
+                            }
+
+                            MenuVariantGroupPrice::query()->updateOrCreate(
+                                [
+                                    'menu_variant_id' => $variant->id,
+                                    'customer_group_id' => $groupId,
+                                ],
+                                ['selling_price' => $price],
+                            );
+                        }
+
+                        Notification::make()
+                            ->title('Harga group berhasil diperbarui')
+                            ->success()
+                            ->send();
+                    }),
                 Action::make('toggle_active')
                     ->label(fn ($record): string => $record->is_active ? 'Nonaktifkan' : 'Aktifkan')
                     ->icon(fn ($record): string => $record->is_active ? 'heroicon-o-eye-slash' : 'heroicon-o-eye')
@@ -159,5 +254,26 @@ class MenusTable
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    private static function groupPriceRows($record, ?int $groupId): array
+    {
+        $prices = $groupId
+            ? MenuVariantGroupPrice::query()
+                ->where('customer_group_id', $groupId)
+                ->whereIn('menu_variant_id', $record->variants->pluck('id'))
+                ->pluck('selling_price', 'menu_variant_id')
+            : collect();
+
+        return $record->variants
+            ->sortBy('sort_order')
+            ->map(fn (MenuVariant $variant): array => [
+                'id' => $variant->id,
+                'name' => $variant->name,
+                'default_price' => $variant->selling_price,
+                'group_price' => $prices->get($variant->id),
+            ])
+            ->values()
+            ->all();
     }
 }

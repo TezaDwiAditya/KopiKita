@@ -6,12 +6,12 @@ use App\Models\Category;
 use App\Models\Menu;
 use App\Models\MenuVariant;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class MenuExportTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     public function test_authenticated_user_can_export_menu_variant_prices_to_excel(): void
     {

@@ -62,7 +62,7 @@ class CustomerStatementReportTest extends TestCase
         ]);
         $menu = $this->createMenu();
 
-        $this->createTransaction($user, $customer, $menu, 'INV-EMAN-HUTANG', 45000, 'draft');
+        $this->createTransaction($user, $customer, $menu, 'INV-EMAN-HUTANG', 40000, 'draft', 5000);
 
         $this->actingAs($user)
             ->get(route('admin.report-exports.customer-product-sales', [
@@ -73,8 +73,14 @@ class CustomerStatementReportTest extends TestCase
             ]))
             ->assertOk()
             ->assertSee('Eman')
-            ->assertSee('Belum Dibayar')
-            ->assertSee('Rp 45.000');
+            ->assertSee('Qty')
+            ->assertSee('Total Sebelum Diskon')
+            ->assertSee('Total Diskon')
+            ->assertSee('Total Tagihan')
+            ->assertSee('Diskon')
+            ->assertSee('Rp 45.000')
+            ->assertSee('Rp 5.000')
+            ->assertSee('Rp 40.000');
     }
 
     private function createMenu(): Menu
@@ -102,14 +108,17 @@ class CustomerStatementReportTest extends TestCase
         string $invoiceNumber,
         int $grandTotal,
         string $status,
+        int $discount = 0,
     ): Transaction {
+        $subtotal = $grandTotal + $discount;
+
         $transaction = Transaction::query()->create([
             'invoice_number' => $invoiceNumber.'-'.uniqid(),
             'transaction_date' => now(),
             'cashier_id' => $user->id,
             'customer_id' => $customer->id,
-            'subtotal' => $grandTotal,
-            'discount' => 0,
+            'subtotal' => $subtotal,
+            'discount' => $discount,
             'tax' => 0,
             'grand_total' => $grandTotal,
             'status' => $status,
@@ -119,8 +128,8 @@ class CustomerStatementReportTest extends TestCase
             'menu_id' => $menu->id,
             'menu_name' => $menu->name,
             'quantity' => 1,
-            'price' => $grandTotal,
-            'subtotal' => $grandTotal,
+            'price' => $subtotal,
+            'subtotal' => $subtotal,
         ]);
 
         return $transaction;

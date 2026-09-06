@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Customers\Schemas;
 
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
@@ -25,6 +26,11 @@ class CustomerForm
                             ->tel()
                             ->maxLength(30)
                             ->regex('/^(?:\+?62|0|8)[0-9\s().-]{8,16}$/'),
+                        Select::make('customer_group_id')
+                            ->label('Group')
+                            ->relationship('group', 'name', fn ($query) => $query->where('is_active', true))
+                            ->searchable()
+                            ->preload(),
                         Textarea::make('note')
                             ->label('Catatan')
                             ->rows(4)

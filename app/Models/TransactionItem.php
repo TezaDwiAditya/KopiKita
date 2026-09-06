@@ -42,7 +42,7 @@ class TransactionItem extends Model
     {
         static::saving(function (TransactionItem $item): void {
             $shouldSyncMenu = ! $item->exists || $item->isDirty('menu_id') || $item->isDirty('menu_variant_id');
-            $shouldSyncPrice = $shouldSyncMenu || (int) $item->price <= 0;
+            $shouldSyncPrice = (int) $item->price <= 0;
 
             if ($item->menu_variant_id && ($shouldSyncMenu || $shouldSyncPrice)) {
                 $variant = MenuVariant::query()

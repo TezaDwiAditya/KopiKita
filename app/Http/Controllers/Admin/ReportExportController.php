@@ -12,7 +12,6 @@ use App\Models\Transaction;
 use App\Models\TransactionItem;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
@@ -464,15 +463,20 @@ class ReportExportController extends Controller
             ->latest('transaction_date')
             ->get()
             ->map(function (Transaction $transaction): array {
-                $paid = $this->paidAmount($transaction);
-                $balance = max((int) $transaction->grand_total - $paid, 0);
+                $grossAmount = (int) ($transaction->subtotal ?: $transaction->items->sum('subtotal'));
+                $discount = (int) $transaction->discount;
+                $amount = max(0, $grossAmount - $discount);
+                $paid = min($this->paidAmount($transaction), $amount);
+                $balance = max($amount - $paid, 0);
 
                 return [
                     'invoice' => $transaction->invoice_number,
                     'customer_name' => $transaction->customer?->name ?? 'Walk-in Customer',
                     'date' => $transaction->transaction_date->format('d M Y'),
                     'qty' => (int) $transaction->items->sum('quantity'),
-                    'amount' => (int) $transaction->grand_total,
+                    'gross_amount' => $grossAmount,
+                    'discount' => $discount,
+                    'amount' => $amount,
                     'paid' => $paid,
                     'balance' => $balance,
                     'items' => $transaction->items->map(fn (TransactionItem $item): array => [
@@ -494,6 +498,8 @@ class ReportExportController extends Controller
                 'customer_count' => $rows->pluck('customer_name')->unique()->count(),
                 'transaction_count' => $rows->count(),
                 'qty' => $rows->sum('qty'),
+                'gross_sales' => $rows->sum('gross_amount'),
+                'discount' => $rows->sum('discount'),
                 'sales' => $rows->sum('amount'),
                 'paid' => $rows->sum('paid'),
                 'unpaid' => $rows->sum('balance'),
@@ -502,5 +508,3 @@ class ReportExportController extends Controller
         ];
     }
 }
-
-

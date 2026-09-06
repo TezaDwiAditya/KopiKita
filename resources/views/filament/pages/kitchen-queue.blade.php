@@ -13,6 +13,8 @@
         .kitchen-tab { border: 0; border-radius: 999px; padding: 9px 14px; cursor: pointer; font-size: 13px; font-weight: 800; background: rgb(243 244 246); color: rgb(55 65 81); }
         .kitchen-tab.active { background: rgb(217 119 6); color: white; }
         .dark .kitchen-tab { background: rgb(31 41 55); color: rgb(229 231 235); }
+        .kitchen-bulk-action { border: 0; border-radius: 11px; padding: 11px 16px; cursor: pointer; font-size: 13px; font-weight: 900; background: rgb(22 163 74); color: white; }
+        .kitchen-bulk-action:disabled { cursor: not-allowed; opacity: .55; }
         .kitchen-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
         .kitchen-card { padding: 14px; display: grid; gap: 12px; }
         .kitchen-card-head { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
@@ -37,7 +39,7 @@
         .empty-state { background: white; border: 1px dashed rgb(209 213 219); border-radius: 14px; padding: 32px; text-align: center; color: rgb(107 114 128); }
         .dark .empty-state { background: rgb(17 24 39); border-color: rgb(75 85 99); }
         @media (max-width: 1100px) { .kitchen-grid, .kitchen-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (max-width: 680px) { .kitchen-grid, .kitchen-stats { grid-template-columns: 1fr; } }
+        @media (max-width: 680px) { .kitchen-grid, .kitchen-stats { grid-template-columns: 1fr; } .kitchen-toolbar, .kitchen-bulk-action { width: 100%; } }
     </style>
 
     <div class="kitchen-shell" wire:poll.10s>
@@ -49,6 +51,16 @@
                 <button type="button" wire:click="setStatusFilter('ready')" class="kitchen-tab {{ $statusFilter === 'ready' ? 'active' : '' }}">Siap</button>
                 <button type="button" wire:click="setStatusFilter('served')" class="kitchen-tab {{ $statusFilter === 'served' ? 'active' : '' }}">Disajikan</button>
             </div>
+            <button
+                type="button"
+                wire:click="markAllReady"
+                wire:loading.attr="disabled"
+                wire:target="markAllReady"
+                @disabled(! $this->canMarkAllReady)
+                class="kitchen-bulk-action"
+            >
+                Siapkan Semua
+            </button>
         </div>
 
         <div class="kitchen-stats">

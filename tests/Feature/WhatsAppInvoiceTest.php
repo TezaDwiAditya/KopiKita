@@ -9,12 +9,12 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Services\QrisService;
 use App\Services\WhatsAppService;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class WhatsAppInvoiceTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     public function test_normalizes_indonesian_whatsapp_number(): void
     {

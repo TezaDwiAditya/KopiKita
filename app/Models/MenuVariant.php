@@ -74,4 +74,9 @@ class MenuVariant extends Model
     {
         return $this->hasMany(TransactionItem::class);
     }
+
+    public function groupPrices(): HasMany
+    {
+        return $this->hasMany(MenuVariantGroupPrice::class);
+    }
 }

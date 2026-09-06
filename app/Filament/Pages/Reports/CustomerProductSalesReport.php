@@ -59,15 +59,20 @@ class CustomerProductSalesReport extends Page
             ->latest('transaction_date')
             ->get()
             ->map(function (Transaction $transaction): array {
-                $paid = $this->paidAmount($transaction);
-                $balance = max((int) $transaction->grand_total - $paid, 0);
+                $grossAmount = (int) ($transaction->subtotal ?: $transaction->items->sum('subtotal'));
+                $discount = (int) $transaction->discount;
+                $amount = max(0, $grossAmount - $discount);
+                $paid = min($this->paidAmount($transaction), $amount);
+                $balance = max($amount - $paid, 0);
 
                 return [
                     'invoice' => $transaction->invoice_number,
                     'customer_name' => $transaction->customer?->name ?? 'Walk-in Customer',
                     'date' => $transaction->transaction_date->format('d M Y'),
                     'qty' => (int) $transaction->items->sum('quantity'),
-                    'amount' => (int) $transaction->grand_total,
+                    'gross_amount' => $grossAmount,
+                    'discount' => $discount,
+                    'amount' => $amount,
                     'paid' => $paid,
                     'balance' => $balance,
                     'items' => $transaction->items->map(fn ($item): array => [
@@ -86,6 +91,8 @@ class CustomerProductSalesReport extends Page
             'customer_count' => $this->rows->pluck('customer_name')->unique()->count(),
             'transaction_count' => $this->rows->count(),
             'qty' => $this->rows->sum('qty'),
+            'gross_sales' => $this->rows->sum('gross_amount'),
+            'discount' => $this->rows->sum('discount'),
             'sales' => $this->rows->sum('amount'),
             'paid' => $this->rows->sum('paid'),
             'unpaid' => $this->rows->sum('balance'),

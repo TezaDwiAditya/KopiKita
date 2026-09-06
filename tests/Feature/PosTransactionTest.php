@@ -7,22 +7,24 @@ use App\Filament\Resources\Transactions\Pages\AddOrderTransaction;
 use App\Filament\Resources\Transactions\TransactionResource;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\CustomerGroup;
 use App\Models\Ingredient;
 use App\Models\Menu;
 use App\Models\MenuVariant;
+use App\Models\MenuVariantGroupPrice;
 use App\Models\Recipe;
 use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\TransactionService;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 use Tests\TestCase;
 
 class PosTransactionTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     public function test_pay_transaction_creates_payment_and_reduces_ingredient_stock(): void
     {
@@ -125,6 +127,51 @@ class PosTransactionTest extends TestCase
             ->assertSet('customerId', null)
             ->assertSet('customerSearch', '')
             ->assertSet('cart', []);
+    }
+
+    public function test_pos_uses_customer_group_price_for_selected_customer(): void
+    {
+        $user = User::factory()->create();
+        $group = CustomerGroup::query()->create([
+            'name' => 'Group 2',
+            'is_active' => true,
+        ]);
+        $customer = Customer::query()->create([
+            'name' => 'Customer Group',
+            'phone_number' => '0800000002',
+            'customer_group_id' => $group->id,
+        ]);
+        $menu = $this->createMenu();
+        $variant = MenuVariant::query()->create([
+            'menu_id' => $menu->id,
+            'name' => 'KSK',
+            'selling_price' => 17000,
+            'cost_price' => 8000,
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+
+        MenuVariantGroupPrice::query()->create([
+            'menu_variant_id' => $variant->id,
+            'customer_group_id' => $group->id,
+            'selling_price' => 16000,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(Pos::class)
+            ->call('selectCustomer', $customer->id)
+            ->call('addToCartVariant', $variant->id)
+            ->call('saveDraft');
+
+        $transaction = Transaction::query()->latest('id')->first();
+        $item = $transaction->items()->first();
+
+        $this->assertSame($customer->id, $transaction->customer_id);
+        $this->assertSame(16000, $item->price);
+        $this->assertSame(16000, $item->subtotal);
+        $this->assertSame(16000, $transaction->subtotal);
+        $this->assertSame(16000, $transaction->grand_total);
     }
 
     public function test_transaction_item_uses_selected_variant_and_recalculates_totals(): void

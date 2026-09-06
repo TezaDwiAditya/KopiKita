@@ -3,9 +3,11 @@
 namespace App\Filament\Resources\Transactions\Schemas;
 
 use App\Filament\Forms\Components\MoneyInput;
+use App\Models\Customer;
 use App\Models\Menu;
 use App\Models\MenuVariant;
 use App\Models\Setting;
+use App\Services\MenuPriceResolver;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
@@ -45,7 +47,12 @@ class TransactionForm
                             ->label('Customer')
                             ->relationship('customer', 'name')
                             ->searchable()
-                            ->preload(),
+                            ->preload()
+                            ->live()
+                            ->afterStateUpdated(function ($state, callable $get, callable $set): void {
+                                self::recalculateItemPrices($state, $get, $set);
+                                self::recalculateFormTotals($get, $set, fromRoot: true);
+                            }),
                         Select::make('status')
                             ->label('Status')
                             ->options([
@@ -90,7 +97,7 @@ class TransactionForm
                                         ->orderBy('name')
                                         ->get()
                                         ->mapWithKeys(fn (MenuVariant $variant): array => [
-                                            $variant->id => $variant->name.' - Rp '.number_format($variant->selling_price, 0, ',', '.'),
+                                            $variant->id => $variant->name.' - Rp '.number_format(self::variantPriceForForm($variant, $get), 0, ',', '.'),
                                         ])
                                         ->all())
                                     ->searchable()
@@ -101,7 +108,7 @@ class TransactionForm
                                         ->where('is_active', true)
                                         ->exists())
                                     ->afterStateUpdated(function ($state, callable $get, callable $set): void {
-                                        self::syncVariantItem($state, $set);
+                                        self::syncVariantItem($state, $get, $set);
                                         self::recalculateItemSubtotal($get, $set);
                                         self::recalculateFormTotals($get, $set);
                                     }),
@@ -201,7 +208,7 @@ class TransactionForm
         $set('menu_name', $menu->name);
         $set('menu_variant_id', $variant?->id);
         $set('variant_name', $variant?->name);
-        $set('price', $variant?->selling_price ?? $menu->selling_price);
+        $set('price', $variant ? self::variantPriceForForm($variant, $get) : self::menuPriceForForm($menu, $get));
 
         if (! $get('quantity')) {
             $set('quantity', 1);
@@ -210,7 +217,7 @@ class TransactionForm
         self::recalculateItemSubtotal($get, $set);
     }
 
-    private static function syncVariantItem(mixed $variantId, callable $set): void
+    private static function syncVariantItem(mixed $variantId, callable $get, callable $set): void
     {
         $variant = MenuVariant::query()
             ->with('menu')
@@ -225,7 +232,7 @@ class TransactionForm
         $set('menu_id', $variant->menu_id);
         $set('menu_name', $variant->menu->name);
         $set('variant_name', $variant->name);
-        $set('price', $variant->selling_price);
+        $set('price', self::variantPriceForForm($variant, $get));
     }
 
     private static function recalculateItemSubtotal(callable $get, callable $set): void
@@ -258,5 +265,54 @@ class TransactionForm
     private static function moneyToInt(mixed $value): int
     {
         return (int) preg_replace('/\D/', '', (string) ($value ?? ''));
+    }
+
+    private static function recalculateItemPrices(mixed $customerId, callable $get, callable $set): void
+    {
+        $customer = self::customerForId($customerId);
+        $resolver = app(MenuPriceResolver::class);
+
+        $items = collect($get('items') ?? [])
+            ->map(function (array $item) use ($customer, $resolver): array {
+                if ($item['menu_variant_id'] ?? null) {
+                    $variant = MenuVariant::query()->find($item['menu_variant_id']);
+
+                    if ($variant) {
+                        $item['price'] = $resolver->priceForVariant($variant, $customer);
+                        $item['subtotal'] = max(1, (int) ($item['quantity'] ?? 1)) * (int) $item['price'];
+                    }
+
+                    return $item;
+                }
+
+                if ($item['menu_id'] ?? null) {
+                    $menu = Menu::query()->find($item['menu_id']);
+
+                    if ($menu) {
+                        $item['price'] = $resolver->priceForMenu($menu, $customer);
+                        $item['subtotal'] = max(1, (int) ($item['quantity'] ?? 1)) * (int) $item['price'];
+                    }
+                }
+
+                return $item;
+            })
+            ->all();
+
+        $set('items', $items);
+    }
+
+    private static function menuPriceForForm(Menu $menu, callable $get): int
+    {
+        return app(MenuPriceResolver::class)->priceForMenu($menu, self::customerForId($get('../../customer_id')));
+    }
+
+    private static function variantPriceForForm(MenuVariant $variant, callable $get): int
+    {
+        return app(MenuPriceResolver::class)->priceForVariant($variant, self::customerForId($get('../../customer_id')));
+    }
+
+    private static function customerForId(mixed $customerId): ?Customer
+    {
+        return $customerId ? Customer::query()->with('group')->find($customerId) : null;
     }
 }

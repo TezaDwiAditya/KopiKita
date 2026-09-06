@@ -109,12 +109,12 @@
                                 @forelse ($menu->activeVariants as $variant)
                                     <button type="button" wire:click="addToCartVariant({{ $variant->id }})" class="pos-variant-btn">
                                         <span>{{ $variant->name }}</span>
-                                        <span>Rp {{ number_format($variant->selling_price, 0, ',', '.') }}</span>
+                                        <span>Rp {{ number_format($this->variantPrice($variant), 0, ',', '.') }}</span>
                                     </button>
                                 @empty
                                     <button type="button" wire:click="addToCart({{ $menu->id }})" class="pos-variant-btn">
                                         <span>Regular</span>
-                                        <span>Rp {{ number_format($menu->selling_price, 0, ',', '.') }}</span>
+                                        <span>Rp {{ number_format($this->menuPrice($menu), 0, ',', '.') }}</span>
                                     </button>
                                 @endforelse
                             </div>

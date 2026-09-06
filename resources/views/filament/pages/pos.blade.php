@@ -124,12 +124,12 @@
                                 @forelse ($menu->activeVariants as $variant)
                                     <button type="button" wire:click="addToCartVariant({{ $variant->id }})" class="pos-variant-btn">
                                         <span>{{ $variant->name }}</span>
-                                        <span>Rp {{ number_format($variant->selling_price, 0, ',', '.') }}</span>
+                                        <span>Rp {{ number_format($this->variantPrice($variant), 0, ',', '.') }}</span>
                                     </button>
                                 @empty
                                     <button type="button" wire:click="addToCart({{ $menu->id }})" class="pos-variant-btn">
                                         <span>Regular</span>
-                                        <span>Rp {{ number_format($menu->selling_price, 0, ',', '.') }}</span>
+                                        <span>Rp {{ number_format($this->menuPrice($menu), 0, ',', '.') }}</span>
                                     </button>
                                 @endforelse
                             </div>
@@ -202,7 +202,7 @@
 
                     @if ($this->selectedCustomer)
                         <div class="customer-selected">
-                            <span>Customer: {{ $this->selectedCustomer->name }}</span>
+                            <span>Customer: {{ $this->selectedCustomer->name }} @if ($this->selectedCustomer->group) / {{ $this->selectedCustomer->group->name }} @endif</span>
                             <button type="button" wire:click="clearCustomer" class="customer-clear">Hapus</button>
                         </div>
                     @endif
@@ -216,7 +216,7 @@
                         @forelse ($this->filteredCustomers as $customer)
                             <button type="button" wire:click="selectCustomer({{ $customer->id }})" @click="open = false" class="customer-option">
                                 <div class="customer-option-title">{{ $customer->name }}</div>
-                                <div class="customer-option-subtitle">{{ $customer->phone_number ?: 'No HP belum diisi' }}</div>
+                                <div class="customer-option-subtitle">{{ $customer->phone_number ?: 'No HP belum diisi' }} @if ($customer->group) / {{ $customer->group->name }} @endif</div>
                             </button>
                         @empty
                             <div class="customer-option">

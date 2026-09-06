@@ -9,6 +9,7 @@ use App\Models\Menu;
 use App\Models\MenuVariant;
 use App\Models\Setting;
 use App\Models\Transaction;
+use App\Services\MenuPriceResolver;
 use App\Services\TransactionService;
 use App\Services\WhatsAppService;
 use BackedEnum;
@@ -89,6 +90,7 @@ class Pos extends Page
     public function getCustomersProperty(): Collection
     {
         return Customer::query()
+            ->with('group')
             ->orderBy('name')
             ->get();
     }
@@ -96,6 +98,7 @@ class Pos extends Page
     public function getFilteredCustomersProperty(): Collection
     {
         return Customer::query()
+            ->with('group')
             ->when($this->customerSearch !== '', fn ($query) => $query
                 ->where('name', 'like', '%'.$this->customerSearch.'%')
                 ->orWhere('phone_number', 'like', '%'.$this->customerSearch.'%'))
@@ -106,7 +109,7 @@ class Pos extends Page
 
     public function getSelectedCustomerProperty(): ?Customer
     {
-        return $this->customerId ? Customer::query()->find($this->customerId) : null;
+        return $this->customerId ? Customer::query()->with('group')->find($this->customerId) : null;
     }
 
     public function getItemCustomOptionsProperty(): Collection
@@ -122,6 +125,7 @@ class Pos extends Page
     {
         if ($this->selectedCustomer?->name !== $this->customerSearch) {
             $this->customerId = null;
+            $this->repriceCartItems();
         }
     }
 
@@ -129,12 +133,14 @@ class Pos extends Page
     {
         $this->customerId = $customerId;
         $this->customerSearch = $customerId ? (string) Customer::query()->whereKey($customerId)->value('name') : '';
+        $this->repriceCartItems();
     }
 
     public function clearCustomer(): void
     {
         $this->customerId = null;
         $this->customerSearch = '';
+        $this->repriceCartItems();
     }
 
     public function selectCategory(?int $categoryId): void
@@ -149,6 +155,7 @@ class Pos extends Page
             ->findOrFail($variantId);
 
         $cartKey = $variant->menu_id.'-'.$variant->id;
+        $price = app(MenuPriceResolver::class)->priceForVariant($variant, $this->selectedCustomer);
 
         if (isset($this->cart[$cartKey])) {
             $this->cart[$cartKey]['qty']++;
@@ -158,7 +165,7 @@ class Pos extends Page
                 'menu_variant_id' => $variant->id,
                 'name' => $variant->menu->name,
                 'variant_name' => $variant->name,
-                'price' => $variant->selling_price,
+                'price' => $price,
                 'qty' => 1,
                 'note' => '',
             ];
@@ -171,6 +178,7 @@ class Pos extends Page
     {
         $menu = Menu::query()->findOrFail($menuId);
         $cartKey = (string) $menu->id;
+        $price = app(MenuPriceResolver::class)->priceForMenu($menu, $this->selectedCustomer);
 
         if (isset($this->cart[$cartKey])) {
             $this->cart[$cartKey]['qty']++;
@@ -178,7 +186,7 @@ class Pos extends Page
             $this->cart[$cartKey] = [
                 'menu_id' => $menu->id,
                 'name' => $menu->name,
-                'price' => $menu->selling_price,
+                'price' => $price,
                 'qty' => 1,
                 'note' => '',
             ];
@@ -289,6 +297,16 @@ class Pos extends Page
     public function getChangeAmountProperty(): int
     {
         return max(0, (int) ($this->amountPaid ?? 0) - $this->grandTotal);
+    }
+
+    public function menuPrice(Menu $menu): int
+    {
+        return app(MenuPriceResolver::class)->priceForMenu($menu, $this->selectedCustomer);
+    }
+
+    public function variantPrice(MenuVariant $variant): int
+    {
+        return app(MenuPriceResolver::class)->priceForVariant($variant, $this->selectedCustomer);
     }
 
     public function saveDraft(): void
@@ -453,6 +471,38 @@ class Pos extends Page
         if ($this->paymentMethod !== 'cash') {
             $this->amountPaid = $this->grandTotal;
         }
+    }
+
+    private function repriceCartItems(): void
+    {
+        if ($this->cart === []) {
+            $this->recalculateTax();
+
+            return;
+        }
+
+        $resolver = app(MenuPriceResolver::class);
+        $customer = $this->selectedCustomer;
+
+        foreach ($this->cart as $cartKey => $item) {
+            if ($item['menu_variant_id'] ?? null) {
+                $variant = MenuVariant::query()->find($item['menu_variant_id']);
+
+                if ($variant) {
+                    $this->cart[$cartKey]['price'] = $resolver->priceForVariant($variant, $customer);
+                }
+
+                continue;
+            }
+
+            $menu = Menu::query()->find($item['menu_id']);
+
+            if ($menu) {
+                $this->cart[$cartKey]['price'] = $resolver->priceForMenu($menu, $customer);
+            }
+        }
+
+        $this->recalculateTax();
     }
 
     private function parseItemCustoms(?string $note): array

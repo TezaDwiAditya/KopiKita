@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\CustomerGroup;
 use App\Models\Ingredient;
 use App\Models\IngredientStock;
 use App\Models\Menu;
@@ -14,6 +15,7 @@ use App\Models\RecipeItem;
 use App\Models\Setting;
 use App\Models\Transaction;
 use App\Policies\CategoryPolicy;
+use App\Policies\CustomerGroupPolicy;
 use App\Policies\CustomerPolicy;
 use App\Policies\IngredientPolicy;
 use App\Policies\IngredientStockPolicy;
@@ -51,6 +53,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Recipe::class, RecipePolicy::class);
         Gate::policy(RecipeItem::class, RecipeItemPolicy::class);
         Gate::policy(Customer::class, CustomerPolicy::class);
+        Gate::policy(CustomerGroup::class, CustomerGroupPolicy::class);
         Gate::policy(Transaction::class, TransactionPolicy::class);
         Gate::policy(Payment::class, PaymentPolicy::class);
         Gate::policy(PurchaseOrder::class, PurchaseOrderPolicy::class);

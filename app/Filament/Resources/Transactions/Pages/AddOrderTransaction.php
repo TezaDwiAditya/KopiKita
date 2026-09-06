@@ -9,6 +9,7 @@ use App\Models\Menu;
 use App\Models\MenuVariant;
 use App\Models\Setting;
 use App\Models\Transaction;
+use App\Services\MenuPriceResolver;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Filament\Resources\Pages\Page;
@@ -111,6 +112,7 @@ class AddOrderTransaction extends Page
             ->findOrFail($variantId);
 
         $cartKey = $variant->menu_id.'-'.$variant->id;
+        $price = app(MenuPriceResolver::class)->priceForVariant($variant, $this->record->customer);
 
         if (isset($this->cart[$cartKey])) {
             $this->cart[$cartKey]['qty']++;
@@ -123,7 +125,7 @@ class AddOrderTransaction extends Page
             'menu_variant_id' => $variant->id,
             'name' => $variant->menu->name,
             'variant_name' => $variant->name,
-            'price' => $variant->selling_price,
+            'price' => $price,
             'qty' => 1,
             'note' => '',
         ];
@@ -133,6 +135,7 @@ class AddOrderTransaction extends Page
     {
         $menu = Menu::query()->findOrFail($menuId);
         $cartKey = (string) $menu->id;
+        $price = app(MenuPriceResolver::class)->priceForMenu($menu, $this->record->customer);
 
         if (isset($this->cart[$cartKey])) {
             $this->cart[$cartKey]['qty']++;
@@ -145,10 +148,20 @@ class AddOrderTransaction extends Page
             'menu_variant_id' => null,
             'name' => $menu->name,
             'variant_name' => null,
-            'price' => $menu->selling_price,
+            'price' => $price,
             'qty' => 1,
             'note' => '',
         ];
+    }
+
+    public function menuPrice(Menu $menu): int
+    {
+        return app(MenuPriceResolver::class)->priceForMenu($menu, $this->record->customer);
+    }
+
+    public function variantPrice(MenuVariant $variant): int
+    {
+        return app(MenuPriceResolver::class)->priceForVariant($variant, $this->record->customer);
     }
 
     public function incrementQty(string|int $cartKey): void

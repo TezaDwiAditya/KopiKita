@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\KitchenQueue;
 use App\Models\Category;
 use App\Models\Menu;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\KitchenOrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class KitchenOrderTest extends TestCase
@@ -40,7 +42,34 @@ class KitchenOrderTest extends TestCase
         $this->assertNotNull($item->served_at);
     }
 
-    private function createKitchenItem(User $user)
+    public function test_kitchen_queue_can_mark_all_active_items_ready(): void
+    {
+        $user = User::factory()->create();
+        $pendingItem = $this->createKitchenItem($user, 'pending');
+        $preparingItem = $this->createKitchenItem($user, 'preparing');
+        $readyItem = $this->createKitchenItem($user, 'ready');
+        $servedItem = $this->createKitchenItem($user, 'served');
+
+        $this->actingAs($user);
+
+        Livewire::test(KitchenQueue::class)
+            ->call('markAllReady');
+
+        $pendingItem->refresh();
+        $preparingItem->refresh();
+        $readyItem->refresh();
+        $servedItem->refresh();
+
+        $this->assertSame('ready', $pendingItem->kitchen_status);
+        $this->assertNotNull($pendingItem->preparing_at);
+        $this->assertNotNull($pendingItem->ready_at);
+        $this->assertSame('ready', $preparingItem->kitchen_status);
+        $this->assertNotNull($preparingItem->ready_at);
+        $this->assertSame('ready', $readyItem->kitchen_status);
+        $this->assertSame('served', $servedItem->kitchen_status);
+    }
+
+    private function createKitchenItem(User $user, string $kitchenStatus = 'pending')
     {
         $category = Category::query()->create([
             'name' => 'Test Food',
@@ -78,7 +107,7 @@ class KitchenOrderTest extends TestCase
             'price' => 20000,
             'subtotal' => 20000,
             'note' => 'Tidak pedas',
-            'kitchen_status' => 'pending',
+            'kitchen_status' => $kitchenStatus,
         ]);
     }
 }

@@ -55,6 +55,11 @@ class KitchenQueue extends Page
         return $this->countByStatus('ready');
     }
 
+    public function getCanMarkAllReadyProperty(): bool
+    {
+        return $this->pendingCount + $this->preparingCount > 0;
+    }
+
     public function getActiveCountProperty(): int
     {
         return $this->pendingCount + $this->preparingCount + $this->readyCount;
@@ -73,6 +78,33 @@ class KitchenQueue extends Page
     public function markReady(int $itemId): void
     {
         $this->updateKitchenStatus($itemId, 'ready');
+    }
+
+    public function markAllReady(): void
+    {
+        try {
+            $service = app(KitchenOrderService::class);
+            $items = TransactionItem::query()
+                ->whereIn('kitchen_status', ['pending', 'preparing'])
+                ->whereHas('transaction', fn ($query) => $query->whereIn('status', ['draft', 'paid']))
+                ->get();
+
+            $items->each(fn (TransactionItem $item) => $service->markReady($item));
+
+            Notification::make()
+                ->title('Semua pesanan aktif siap')
+                ->body($items->count().' item diperbarui menjadi siap.')
+                ->success()
+                ->send();
+        } catch (Throwable $exception) {
+            report($exception);
+
+            Notification::make()
+                ->title('Gagal memperbarui semua status')
+                ->body('Terjadi kesalahan saat memproses antrian dapur.')
+                ->danger()
+                ->send();
+        }
     }
 
     public function markServed(int $itemId): void

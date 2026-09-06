@@ -67,8 +67,9 @@
                 </div>
                 <div>
                     <div class="summary-row"><span>Diterima:</span><span class="amount">{{ $this->rupiah($this->summary['paid']) }}</span></div>
-                    <div class="summary-row"><span>Belum Dibayar:</span><span class="amount">{{ $this->rupiah($this->summary['unpaid']) }}</span></div>
-                    <div class="summary-row"><span>Total Penjualan:</span><span class="amount">{{ $this->rupiah($this->summary['sales']) }}</span></div>
+                    <div class="summary-row"><span>Total Sebelum Diskon:</span><span class="amount">{{ $this->rupiah($this->summary['gross_sales']) }}</span></div>
+                    <div class="summary-row"><span>Total Diskon:</span><span class="amount">{{ $this->rupiah($this->summary['discount']) }}</span></div>
+                    <div class="summary-row"><span>Total Tagihan:</span><span class="amount">{{ $this->rupiah($this->summary['sales']) }}</span></div>
                 </div>
             </div>
 
@@ -85,8 +86,10 @@
                             <th>Nama Pihak</th>
                             <th>Tanggal Faktur</th>
                             <th>Produk</th>
-                            <th class="text-right">Jumlah</th>
+                            <th class="text-right">Qty</th>
                             <th class="text-right">Harga Jual</th>
+                            <th class="text-right">Jumlah</th>
+                            <th class="text-right">Diskon</th>
                             <th class="text-right">Jumlah Total</th>
                             <th class="text-right">Diterima</th>
                             <th class="text-right">Saldo</th>
@@ -113,12 +116,18 @@
                                         <div>{{ $this->rupiah($item['price']) }}</div>
                                     @endforeach
                                 </td>
+                                <td class="text-right">
+                                    @foreach ($row['items'] as $item)
+                                        <div>{{ $this->rupiah($item['subtotal']) }}</div>
+                                    @endforeach
+                                </td>
+                                <td class="text-right">{{ $this->rupiah($row['discount']) }}</td>
                                 <td class="text-right">{{ $this->rupiah($row['amount']) }}</td>
                                 <td class="text-right">{{ $this->rupiah($row['paid']) }}</td>
                                 <td class="text-right">{{ $this->rupiah($row['balance']) }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="9">Tidak ada data penjualan customer untuk periode ini.</td></tr>
+                            <tr><td colspan="10">Tidak ada data penjualan customer untuk periode ini.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
