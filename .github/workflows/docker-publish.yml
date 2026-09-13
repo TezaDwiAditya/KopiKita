@@ -74,17 +74,17 @@ jobs:
 
           git pull --ff-only origin main
 
-          sudo env APP_IMAGE_TAG="$IMAGE_TAG" docker compose \
+          env APP_IMAGE_TAG="$IMAGE_TAG" docker compose \
             --env-file .env.production \
             -f docker-compose.prod.yml pull app
 
-          sudo env APP_IMAGE_TAG="$IMAGE_TAG" docker compose \
+          env APP_IMAGE_TAG="$IMAGE_TAG" docker compose \
             --env-file .env.production \
             -f docker-compose.prod.yml up -d app nginx
 
-          sudo docker image prune -f
+          docker image prune -f
 
-          sudo env APP_IMAGE_TAG="$IMAGE_TAG" docker compose \
+          env APP_IMAGE_TAG="$IMAGE_TAG" docker compose \
             --env-file .env.production \
             -f docker-compose.prod.yml ps
 
