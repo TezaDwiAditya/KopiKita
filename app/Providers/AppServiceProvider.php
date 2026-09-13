@@ -46,6 +46,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+
+        if (app()->environment('production')) {
+           \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
+
+
         Gate::policy(Category::class, CategoryPolicy::class);
         Gate::policy(Menu::class, MenuPolicy::class);
         Gate::policy(Ingredient::class, IngredientPolicy::class);
